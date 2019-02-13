@@ -4,8 +4,8 @@
         <hostlist>
             <host hostname="aipanda081.cern.ch">
                 <contacts>
-                    <email>fernando.harald.barreiro.megino@cern.ch</email>
-                    <email>aaleksee@cern.ch</email>
+                    <email></email>
+                    <email></email>
                 </contacts>
                 <hostisenable>True</hostisenable>
                 <lastsubmittedworker>240</lastsubmittedworker>
@@ -26,8 +26,8 @@
         <hostlist>
             <host hostname="aipanda083.cern.ch">
                 <contacts>
-                    <email>fernando.harald.barreiro.megino@cern.ch</email>
-                    <email>aaleksee@cern.ch</email>
+                    <email></email>
+                    <email></email>
                 </contacts>
                 <hostisenable>True</hostisenable>
                 <lastsubmittedworker>240</lastsubmittedworker>
@@ -48,8 +48,8 @@
         <hostlist>
             <host hostname="aipanda171.cern.ch">
             <contacts>
-                <email>fernando.harald.barreiro.megino@cern.ch</email>
-                <email>aaleksee@cern.ch</email>
+                <email></email>
+                <email></email>
             </contacts>
             <lastsubmittedworker>30</lastsubmittedworker>
             <hostisenable>True</hostisenable>
@@ -67,8 +67,8 @@
         </host>
   <host hostname="aipanda172.cern.ch">
             <contacts>
-                <email>fernando.harald.barreiro.megino@cern.ch</email>
-                <email>aaleksee@cern.ch</email>
+                <email></email>
+                <email></email>
             </contacts>
             <lastsubmittedworker>30</lastsubmittedworker>
             <hostisenable>True</hostisenable>
