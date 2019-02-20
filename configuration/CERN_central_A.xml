@@ -1,0 +1,43 @@
+<?xml version="1.0"?>
+<instances>
+    <instance harvesterid="CERN_central_A" instanceisenable = "True">
+        <hostlist>
+            <host hostname="aipanda171.cern.ch">
+            <contacts>
+                <email>forcontact@mail.com</email>
+                <email>forcontact@mail.com</email>
+            </contacts>
+            <lastsubmittedworker>30</lastsubmittedworker>
+            <hostisenable>True</hostisenable>
+            <lastheartbeat>30</lastheartbeat>
+            <memory>6000</memory>
+            <metrics>
+                <!--<mib_warning>50</mib_warning>-->
+                <!--<mib_critical>10</mib_critical>-->
+                <cpu_warning>50</cpu_warning>
+                <cpu_critical>80</cpu_critical>
+                <disk_warning>70</disk_warning>
+                <disk_critical>80</disk_critical>
+            </metrics>
+        </host>
+        <host hostname="aipanda172.cern.ch">
+            <contacts>
+                <email>forcontact@mail.com</email>
+                <email>forcontact@mail.com</email>
+            </contacts>
+            <lastsubmittedworker>30</lastsubmittedworker>
+            <hostisenable>True</hostisenable>
+            <lastheartbeat>30</lastheartbeat>
+            <memory>6000</memory>
+            <metrics>
+                <!--<mib_warning>50</mib_warning>-->
+                <!--<mib_critical>10</mib_critical>-->
+                <cpu_warning>50</cpu_warning>
+                <cpu_critical>80</cpu_critical>
+                <disk_warning>70</disk_warning>
+                <disk_critical>80</disk_critical>
+            </metrics>
+        </host>
+        </hostlist>
+    </instance>
+</instances>

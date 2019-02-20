@@ -1,0 +1,25 @@
+<?xml version="1.0"?>
+<instances>
+	<instance harvesterid = "test_aipanda083" instanceisenable = "True">
+        <hostlist>
+            <host hostname="aipanda083.cern.ch">
+                <contacts>
+                    <email>forcontact@mail.com</email>
+                    <email>forcontact@mail.com</email>
+                </contacts>
+                <hostisenable>True</hostisenable>
+                <lastsubmittedworker>240</lastsubmittedworker>
+                <lastheartbeat>30</lastheartbeat>
+                <memory>6000</memory>
+                <metrics>
+                    <!--<mib_warning>50</mib_warning>-->
+                    <!--<mib_critical>10</mib_critical>-->
+                    <cpu_warning>50</cpu_warning>
+                    <cpu_critical>80</cpu_critical>
+                    <disk_warning>80</disk_warning>
+                    <disk_critical>70</disk_critical>
+                </metrics>
+            </host>
+        </hostlist>
+    </instance>
+</instances>

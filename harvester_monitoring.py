@@ -12,7 +12,7 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 def main():
 
-    config = Config(BASE_DIR + '/configuration/grid.xml')
+    config = Config(BASE_DIR + '/configuration/')
     sqlite = Sqlite(BASE_DIR + '/storage/harvester.db', config.XMLconfiguration)
     pandadb = PandaDB(BASE_DIR + '/settings.ini')
     es =  Es(BASE_DIR + '/settings.ini')
