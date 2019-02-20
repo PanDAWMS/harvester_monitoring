@@ -23,6 +23,7 @@ class Config:
                     for hostlist in harvesterid:
                         for host in hostlist:
                             configuration[harvesterid.attrib['harvesterid']][host.attrib['hostname']] = {}
+                            configuration[harvesterid.attrib['harvesterid']][host.attrib['hostname']]['hostisenable'] = host.attrib['hostisenable']
                             for hostparam in host:
                                 if hostparam.tag == 'contacts':
                                     configuration[harvesterid.attrib['harvesterid']][host.attrib['hostname']][hostparam.tag] = []

@@ -2,13 +2,12 @@
 <instances>
     <instance harvesterid="CERN_central_A" instanceisenable = "True">
         <hostlist>
-            <host hostname="aipanda171.cern.ch">
+            <host hostname="aipanda171.cern.ch" hostisenable = "True">
             <contacts>
                 <email>forcontact@mail.com</email>
                 <email>forcontact@mail.com</email>
             </contacts>
             <lastsubmittedworker>30</lastsubmittedworker>
-            <hostisenable>True</hostisenable>
             <lastheartbeat>30</lastheartbeat>
             <memory>6000</memory>
             <metrics>
@@ -20,13 +19,12 @@
                 <disk_critical>80</disk_critical>
             </metrics>
         </host>
-        <host hostname="aipanda172.cern.ch">
+        <host hostname="aipanda172.cern.ch" hostisenable = "True">
             <contacts>
                 <email>forcontact@mail.com</email>
                 <email>forcontact@mail.com</email>
             </contacts>
             <lastsubmittedworker>30</lastsubmittedworker>
-            <hostisenable>True</hostisenable>
             <lastheartbeat>30</lastheartbeat>
             <memory>6000</memory>
             <metrics>

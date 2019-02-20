@@ -2,14 +2,13 @@
 <instances>
     <instance harvesterid = "test_fbarreir" instanceisenable = "True">
         <hostlist>
-            <host hostname="aipanda081.cern.ch">
+            <host hostname="aipanda081.cern.ch" hostisenable = "True">
                 <contacts>
                     <email>forcontact@mail.com</email>
                     <email>forcontact@mail.com</email>
                 </contacts>
-                <hostisenable>True</hostisenable>
-                <lastsubmittedworker>240</lastsubmittedworker>
-                <lastheartbeat>30</lastheartbeat>
+                <lastsubmittedworker>240m</lastsubmittedworker>
+                <lastheartbeat>30m</lastheartbeat>
                 <memory>6000</memory>
                 <metrics>
                     <!--<mib_warning>50</mib_warning>-->

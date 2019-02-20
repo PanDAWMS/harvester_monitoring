@@ -7,7 +7,7 @@ class Sqlite:
         self.connection = self.__make_connection(path)
         self.instancesconfigs = configs
 
-    "private method"
+   #private method#
     def __make_connection(self, path):
         """
         Create a connection to the SQLite cache
@@ -93,22 +93,21 @@ class Sqlite:
             if instanceisenable:
                 ### No submitted worker ###
                 for host in lastsubmitedinstance[harvesterid]['harvesterhost']:
-                    mins = 30
+                    timedelta_submitted = timedelta(minutes=30)
                     if host != 'none' and host in instancesconfig[harvesterid]:
-                        mins = int(instancesconfig[harvesterid][host]['lastsubmittedworker'])
+                        timedelta_submitted = self.__get_timedelta(instancesconfig[harvesterid][host]['lastsubmittedworker'])
                         if lastsubmitedinstance[harvesterid]['harvesterhost'][host][
-                            'harvesterhostmaxtime'] < datetime.utcnow() - timedelta(
-                                minutes=mins):
+                            'harvesterhostmaxtime'] < datetime.utcnow() - timedelta_submitted:
                             errorsdesc = errorsdesc + "Last submitted worker was {0}".format(
                                 str(lastsubmitedinstance[harvesterid]['harvesterhost'][host]['harvesterhostmaxtime'])) + '\n'
                             avaibility = 0
                 ### No heartbeat ###
                 for host in instancesconfig[harvesterid].keys():
-                    if host in metrics[harvesterid] and bool(instancesconfig[harvesterid][host]['hostisenable']):
+                    if host in metrics[harvesterid] and self.__str_to_bool(instancesconfig[harvesterid][host]['hostisenable']):
                         heartbeattime = metrics[harvesterid][host].keys()[0]
                         contacts = instancesconfig[harvesterid][host]['contacts']
-                        if heartbeattime < datetime.utcnow() - timedelta(
-                                minutes=int(instancesconfig[harvesterid][host]['lastheartbeat'])):
+                        timedelta_heartbeat = self.__get_timedelta(instancesconfig[harvesterid][host]['lastheartbeat'])
+                        if heartbeattime < datetime.utcnow() - timedelta_heartbeat:
                             errorsdesc = errorsdesc + "Last heartbeat was {0}".format(
                                 str(heartbeattime)) + '\n'
                             avaibility = 0
@@ -187,7 +186,7 @@ class Sqlite:
                 cur.execute("DELETE FROM INSTANCES WHERE harvesterid = ?", [str(harvesterid)])
                 connection.commit()
 
-    "private method"
+    #private method#
     def __get_change(self, current, previous):
         """
         Get difference in percent
@@ -204,7 +203,7 @@ class Sqlite:
         except ZeroDivisionError:
             return 100
 
-    "private method"
+    #private method#
     def __str_to_bool(self, s):
         """
         Convert XML string fields to bool type
@@ -215,3 +214,14 @@ class Sqlite:
             return False
         else:
             raise ValueError
+
+    #private method#
+    def __get_timedelta(self,time):
+        if 'm' in time:
+            return timedelta(minutes=int(time[:-1]))
+        if 'h' in time:
+            return timedelta(hours=int(time[:-1]))
+        if 'd' in time:
+            return timedelta(days=int(time[:-1]))
+        else:
+            return timedelta(minutes=int(time))

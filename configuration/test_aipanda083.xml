@@ -2,12 +2,11 @@
 <instances>
 	<instance harvesterid = "test_aipanda083" instanceisenable = "True">
         <hostlist>
-            <host hostname="aipanda083.cern.ch">
+            <host hostname="aipanda083.cern.ch"  hostisenable = "True">
                 <contacts>
                     <email>forcontact@mail.com</email>
                     <email>forcontact@mail.com</email>
                 </contacts>
-                <hostisenable>True</hostisenable>
                 <lastsubmittedworker>240</lastsubmittedworker>
                 <lastheartbeat>30</lastheartbeat>
                 <memory>6000</memory>
