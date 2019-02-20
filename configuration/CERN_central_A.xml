@@ -29,7 +29,7 @@
             <memory>6000</memory>
             <metrics>
                 <memory_warning>50</memory_warning>
-                <memory_critical>10</memory_critical>
+                <memory_critical>80</memory_critical>
                 <cpu_warning>50</cpu_warning>
                 <cpu_critical>80</cpu_critical>
                 <disk_warning>70</disk_warning>
