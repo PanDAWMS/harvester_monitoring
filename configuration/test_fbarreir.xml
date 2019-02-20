@@ -11,8 +11,8 @@
                 <lastheartbeat>30m</lastheartbeat>
                 <memory>6000</memory>
                 <metrics>
-                    <!--<mib_warning>50</mib_warning>-->
-                    <!--<mib_critical>10</mib_critical>-->
+                    <memory_warning>50</memory_warning>
+                    <memory_critical>80</memory_critical>
                     <cpu_warning>50</cpu_warning>
                     <cpu_critical>80</cpu_critical>
                     <disk_warning>80</disk_warning>

@@ -118,24 +118,28 @@ class Sqlite:
                             cpu_critical = instancesconfig[harvesterid][host]['metrics']['cpu_critical']
                             disk_warning = instancesconfig[harvesterid][host]['metrics']['disk_warning']
                             disk_critical = instancesconfig[harvesterid][host]['metrics']['disk_critical']
+                            memory_warning = instancesconfig[harvesterid][host]['metrics']['memory_warning']
+                            memory_critical = instancesconfig[harvesterid][host]['metrics']['memory_critical']
                             #### Metrics DB ####
                             for metric in metrics[harvesterid][host][heartbeattime]:
                                 cpu_pc = int(metric['cpu_pc'])
-                                free_mib = int(self.__get_change(metric['rss_mib'], memory))
                                 if 'volume_data_pc' in metric:
                                     volume_data_pc = int(metric['volume_data_pc'])
                                 else:
                                     volume_data_pc = -1
-
+                                if 'memory_pc' in metric:
+                                    memory_pc = int(metric['memory_pc'])
+                                else:
+                                    memory_pc = int(self.__get_change(memory, metric['rss_mib']))
                                 #### Memory ####
-                                if free_mib <= 50:
+                                if memory_pc >= memory_warning:
                                     avaibility = 50
                                     errorsdesc = errorsdesc + "Warning!. Memory consumption: {0}".format(
-                                        str(free_mib)) + '\n'
-                                elif free_mib <= 10:
-                                    errorsdesc = errorsdesc + "Memory consumption: {0}".format(
-                                        str(free_mib)) + '\n'
+                                        str(memory_pc)) + '\n'
+                                elif memory_pc >= memory_critical:
                                     avaibility = 0
+                                    errorsdesc = errorsdesc + "Memory consumption: {0}".format(
+                                        str(memory_pc)) + '\n'
                                 #### CPU ####
                                 if cpu_pc >= cpu_warning:
                                     avaibility = 50
