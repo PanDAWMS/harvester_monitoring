@@ -86,7 +86,8 @@ class Sqlite:
 
         for harvesterid in harvesters:
             avaibility = 100
-            errorsdesc = ''
+            error_text = set()
+
             instanceisenable = self.__str_to_bool(instancesconfig[harvesterid]['instanceisenable'])
             del instancesconfig[harvesterid]['instanceisenable']
             ### Instance is enable ###
@@ -98,9 +99,11 @@ class Sqlite:
                         timedelta_submitted = self.__get_timedelta(instancesconfig[harvesterid][host]['lastsubmittedworker'])
                         if lastsubmitedinstance[harvesterid]['harvesterhost'][host][
                             'harvesterhostmaxtime'] < datetime.utcnow() - timedelta_submitted:
-                            errorsdesc = errorsdesc + "Last submitted worker was {0}".format(
+                            error = "Last submitted worker was {0}".format(
                                 str(lastsubmitedinstance[harvesterid]['harvesterhost'][host]['harvesterhostmaxtime'])) + '\n'
+                            error_text.add(error)
                             avaibility = 0
+                        else: avaibility = 100
                 ### No heartbeat ###
                 for host in instancesconfig[harvesterid].keys():
                     if host in metrics[harvesterid] and self.__str_to_bool(instancesconfig[harvesterid][host]['hostisenable']):
@@ -108,9 +111,11 @@ class Sqlite:
                         contacts = instancesconfig[harvesterid][host]['contacts']
                         timedelta_heartbeat = self.__get_timedelta(instancesconfig[harvesterid][host]['lastheartbeat'])
                         if heartbeattime < datetime.utcnow() - timedelta_heartbeat:
-                            errorsdesc = errorsdesc + "Last heartbeat was {0}".format(
+                            error = "Last heartbeat was {0}".format(
                                 str(heartbeattime)) + '\n'
+                            error_text.add(error)
                             avaibility = 0
+                        else: avaibility = 100
                         #### Metrics ####
                         if avaibility == 100:
                             memory = instancesconfig[harvesterid][host]['memory']
@@ -131,61 +136,73 @@ class Sqlite:
                                     memory_pc = int(metric['memory_pc'])
                                 else:
                                     memory_pc = int(self.__get_change(memory, metric['rss_mib']))
+
                                 #### Memory ####
                                 if memory_pc >= memory_warning:
                                     avaibility = 50
-                                    errorsdesc = errorsdesc + "Warning!. Memory consumption: {0}".format(
+                                    error = "Warning!. Memory consumption: {0}".format(
                                         str(memory_pc)) + '\n'
+                                    error_text.add(error)
                                 elif memory_pc >= memory_critical:
                                     avaibility = 0
-                                    errorsdesc = errorsdesc + "Memory consumption: {0}".format(
+                                    error = "Memory consumption: {0}".format(
                                         str(memory_pc)) + '\n'
+                                    error_text.add(error)
+
                                 #### CPU ####
                                 if cpu_pc >= cpu_warning:
                                     avaibility = 50
-                                    errorsdesc = errorsdesc + "Warning!. CPU utilization: {0}".format(
+                                    error = "Warning!. CPU utilization: {0}".format(
                                         str(cpu_pc)) + '\n'
+                                    error_text.add(error)
                                 elif cpu_pc >= cpu_critical:
-                                    errorsdesc = errorsdesc + "CPU utilization: {0}".format(
-                                        str(cpu_pc)) + '\n'
                                     avaibility = 10
+                                    error = "CPU utilization: {0}".format(
+                                        str(cpu_pc)) + '\n'
+                                    error_text.add(error)
+
                                 #### HDD ####
                                 if volume_data_pc >= disk_warning:
                                     avaibility = 50
-                                    errorsdesc = errorsdesc + "Warning!. Disk utilization: {0}".format(
+                                    error = "Warning!. Disk utilization: {0}".format(
                                         str(volume_data_pc)) + '\n'
+                                    error_text.add(error)
                                 elif volume_data_pc >= disk_critical:
-                                    errorsdesc = errorsdesc + "Disk utilization: {0}".format(
-                                        str(volume_data_pc)) + '\n'
                                     avaibility = 10
+                                    error = "Disk utilization: {0}".format(
+                                        str(volume_data_pc)) + '\n'
+                                    error_text.add(error)
                                 #### HDD1 ####
                                 if 'volume_data1_pc' in metric:
                                     volume_data1_pc = int(metric['volume_data1_pc'])
                                     if volume_data1_pc >= disk_warning:
                                         avaibility = 50
-                                        errorsdesc = errorsdesc + "Warning!. Disk 1 utilization: {0}".format(
+                                        error = "Warning!. Disk 1 utilization: {0}".format(
                                             str(volume_data1_pc)) + '\n'
+                                        error_text.add(error)
                                     elif volume_data1_pc >= disk_critical:
-                                        errorsdesc = errorsdesc + "Disk 1 utilization: {0}".format(
-                                            str(volume_data1_pc)) + '\n'
                                         avaibility = 10
+                                        error = "Disk 1 utilization: {0}".format(
+                                            str(volume_data1_pc)) + '\n'
+                                        error_text.add(error)
                     try:
                         cur.execute("insert into INSTANCES values (?,?,?,?,?,?,?,?,?)",
                                     (str(harvesterid), str(host),
                                      str(lastsubmitedinstance[harvesterid]['harvesterhost'][host]['harvesterhostmaxtime']),
-                                     heartbeattime, 1, 0, avaibility, str(contacts), str(errorsdesc)))
+                                     heartbeattime, 1, 0, avaibility, str(contacts), ', '.join(str(e) for e in error_text)))
                         connection.commit()
+                        error_text = set()
                     except:
                         query = \
                             """UPDATE INSTANCES 
         SET lastsubmitted = '{0}', active = {1}, availability = {2}, lastheartbeat = '{3}', contacts = '{4}', errorsdesc = '{5}'
         WHERE harvesterid = '{6}' and harvesterhost = '{7}'
                             """.format(str(lastsubmitedinstance[harvesterid]['harvesterhost'][host]['harvesterhostmaxtime']),
-                                       1, avaibility, heartbeattime, str(contacts), str(errorsdesc), str(harvesterid),
+                                       1, avaibility, heartbeattime, str(contacts), ', '.join(str(e) for e in error_text), str(harvesterid),
                                        str(host))
-
                         cur.execute(query)
                         connection.commit()
+                        error_text = set()
             else:
                 cur.execute("DELETE FROM INSTANCES WHERE harvesterid = ?", [str(harvesterid)])
                 connection.commit()
