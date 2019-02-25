@@ -12,6 +12,6 @@ The Harvester service monitoring runs as a cronjob and checks prefedined Harvest
 ## Operating it
 - Node and work directory: aipanda179:/data/harvester_service_monitoring
 - Important folders:
- - [x] Configuration: ./configuration. Contains one XML file per harvester instance
- - [ ] Logging: there is currently no logging
- - [ ] Cron: where is the cron running?
+  - [x] Configuration: ./configuration. Contains one XML file per harvester instance
+  - [ ] Logging: there is currently no logging
+  - [ ] Cron: where is the cron running?
