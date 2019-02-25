@@ -8,8 +8,9 @@ The Harvester service monitoring runs as a cronjob and checks prefedined Harvest
 - CPU usage
 - Disk usage
 - Last submission of workers
+- Last heartbeat
 
-## Operating it
+## Basic operations
 - Node: aipanda179
 - Important folders:
   - [x] Work directory: */data/harvester_service_monitoring*
@@ -22,3 +23,5 @@ The Harvester service monitoring runs as a cronjob and checks prefedined Harvest
 ...
 */10 * * * * root /usr/bin/python /data/harvester_service_monitoring/harvester_monitoring.py > /dev/null 2>&1
 ```
+### Configuration
+**Add some examples for configuration. How to disable a particular metric?**
