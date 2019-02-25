@@ -14,4 +14,9 @@ The Harvester service monitoring runs as a cronjob and checks prefedined Harvest
 - Important folders:
   - [x] Configuration: ./configuration. Contains one XML file per harvester instance
   - [ ] Logging: there is currently no logging
-  - [ ] Cron: where is the cron running?
+  - [x] Cronjob: 
+```
+[root@aipanda179 tmp]# cat /etc/crontab
+...
+*/10 * * * * root /usr/bin/python /data/harvester_service_monitoring/harvester_monitoring.py > /dev/null 2>&1
+```
