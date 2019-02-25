@@ -10,9 +10,10 @@ The Harvester service monitoring runs as a cronjob and checks prefedined Harvest
 - Last submission of workers
 
 ## Operating it
-- Node and work directory: aipanda179:/data/harvester_service_monitoring
+- Node: aipanda179:
 - Important folders:
-  - [x] Configuration: ./configuration. Contains one XML file per harvester instance
+  - [x] Work directory: /data/harvester_service_monitoring
+  - [x] Configuration: /data/harvester_service_monitoring/configuration. Contains one XML file per harvester instance
   - [ ] Logging: there is currently no logging
   - [x] Cronjob: 
 ```
