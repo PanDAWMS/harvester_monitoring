@@ -15,7 +15,7 @@ def main():
     config = Config(BASE_DIR + '/configuration/')
     sqlite = Sqlite(BASE_DIR + '/storage/harvester.db', config.XMLconfiguration)
     pandadb = PandaDB(BASE_DIR + '/settings.ini')
-    es =  Es(BASE_DIR + '/settings.ini')
+    es = Es(BASE_DIR + '/settings.ini')
 
     metrics = pandadb.get_db_metrics()
     dictHarvesterHosts, dictHarvesterInstnaces = es.get_last_submittedtime()

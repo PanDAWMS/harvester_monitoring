@@ -1,8 +1,8 @@
 <?xml version="1.0"?>
 <instances>
-    <instance harvesterid="test_aipanda083" instanceisenable="True">
+    <instance harvesterid="CERN_central_0" instanceisenable="True">
         <hostlist>
-            <host hostname="aipanda083.cern.ch" hostisenable="True">
+            <host hostname="aipanda175.cern.ch" hostisenable="True">
                 <contacts>
                     <email>forcontact@mail.com</email>
                     <email>forcontact@mail.com</email>
@@ -10,7 +10,7 @@
                 <memory>6000</memory>
                 <metrics>
                     <metric name="lastsubmittedworker" enable="True">
-                        <value>240</value>
+                        <value>1d</value>
                     </metric>
                     <metric name="lastheartbeat" enable="True">
                         <value>30</value>
@@ -28,6 +28,7 @@
                         <disk_critical>70</disk_critical>
                     </metric>
                 </metrics>
+
             </host>
         </hostlist>
     </instance>

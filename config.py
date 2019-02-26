@@ -6,7 +6,7 @@ class Config:
     def __init__(self, path):
         self.XMLconfiguration = self.__read_configs_xml(path)
 
-    "private method"
+    #####private method####
     def __read_configs_xml(self, path):
         """
         Read harvester monitoring metrics from XML files
@@ -16,7 +16,6 @@ class Config:
             if file.endswith(".xml"):
                 tree = ET.parse(os.path.join(path, file))
                 root = tree.getroot()
-
                 for harvesterid in root:
                     configuration[harvesterid.attrib['harvesterid']] = {}
                     configuration[harvesterid.attrib['harvesterid']]['instanceisenable'] = harvesterid.attrib['instanceisenable']
@@ -35,10 +34,17 @@ class Config:
                                             configuration[harvesterid.attrib['harvesterid']][host.attrib['hostname']][hostparam.tag])
                                 elif hostparam.tag == 'metrics':
                                     configuration[harvesterid.attrib['harvesterid']][host.attrib['hostname']][hostparam.tag] = {}
-                                    for metric in hostparam:
-                                        configuration[harvesterid.attrib['harvesterid']][host.attrib['hostname']][hostparam.tag][
-                                            metric.tag] \
-                                            = int(metric.text)
+                                    for metrics in hostparam:
+                                        configuration[harvesterid.attrib['harvesterid']][host.attrib['hostname']][
+                                            hostparam.tag][
+                                            metrics.attrib['name']] = {}
+                                        configuration[harvesterid.attrib['harvesterid']][host.attrib['hostname']][
+                                            hostparam.tag][
+                                            metrics.attrib['name']]['enable'] = metrics.attrib['enable']
+                                        for metric in metrics:
+                                            configuration[harvesterid.attrib['harvesterid']][host.attrib['hostname']][
+                                                hostparam.tag][
+                                                metrics.attrib['name']][metric.tag] = metric.text
                                 else:
                                     configuration[harvesterid.attrib['harvesterid']][host.attrib['hostname']][
                                         hostparam.tag] = hostparam.text

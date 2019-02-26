@@ -92,99 +92,112 @@ class Sqlite:
             del instancesconfig[harvesterid]['instanceisenable']
             ### Instance is enable ###
             if instanceisenable:
-                ### No submitted worker ###
-                for host in lastsubmitedinstance[harvesterid]['harvesterhost']:
-                    timedelta_submitted = timedelta(minutes=30)
-                    if host != 'none' and host in instancesconfig[harvesterid]:
-                        timedelta_submitted = self.__get_timedelta(instancesconfig[harvesterid][host]['lastsubmittedworker'])
-                        if lastsubmitedinstance[harvesterid]['harvesterhost'][host][
-                            'harvesterhostmaxtime'] < datetime.utcnow() - timedelta_submitted:
-                            error = "Last submitted worker was {0}".format(
-                                str(lastsubmitedinstance[harvesterid]['harvesterhost'][host]['harvesterhostmaxtime'])) + '\n'
-                            error_text.add(error)
-                            avaibility = 0
-                        else: avaibility = 100
-                ### No heartbeat ###
+
                 for host in instancesconfig[harvesterid].keys():
-                    if host in metrics[harvesterid] and self.__str_to_bool(instancesconfig[harvesterid][host]['hostisenable']):
-                        heartbeattime = metrics[harvesterid][host].keys()[0]
-                        contacts = instancesconfig[harvesterid][host]['contacts']
-                        timedelta_heartbeat = self.__get_timedelta(instancesconfig[harvesterid][host]['lastheartbeat'])
-                        if heartbeattime < datetime.utcnow() - timedelta_heartbeat:
-                            error = "Last heartbeat was {0}".format(
-                                str(heartbeattime)) + '\n'
-                            error_text.add(error)
-                            avaibility = 0
-                        else: avaibility = 100
+                    if self.__str_to_bool(instancesconfig[harvesterid][host]['hostisenable']):
+                        ### No submitted worker ###
+                        timedelta_submitted = timedelta(minutes=30)
+                        if host != 'none' and host in instancesconfig[harvesterid] \
+                                and self.__str_to_bool( instancesconfig[harvesterid][host]['metrics']['lastsubmittedworker']['enable']):
+                            timedelta_submitted = self.__get_timedelta(
+                                instancesconfig[harvesterid][host]['metrics']['lastsubmittedworker']['value'])
+                            if lastsubmitedinstance[harvesterid]['harvesterhost'][host][
+                                'harvesterhostmaxtime'] < datetime.utcnow() - timedelta_submitted:
+                                error = "Last submitted worker was {0}".format(
+                                    str(lastsubmitedinstance[harvesterid]['harvesterhost'][host][
+                                            'harvesterhostmaxtime'])) + '\n'
+                                error_text.add(error)
+                                avaibility = 0
+                            else:
+                                avaibility = 100
+                        if harvesterid in metrics:
+                            ### No heartbeat ###
+                            heartbeattime = metrics[harvesterid][host].keys()[0]
+                            contacts = instancesconfig[harvesterid][host]['contacts']
+                            timedelta_heartbeat = self.__get_timedelta(instancesconfig[harvesterid][host]['metrics']['lastheartbeat']['value'])
+                            if self.__str_to_bool( instancesconfig[harvesterid][host]['metrics']['lastheartbeat']['enable']) and \
+                                    heartbeattime < datetime.utcnow() - timedelta_heartbeat:
+                                error = "Last heartbeat was {0}".format(
+                                    str(heartbeattime)) + '\n'
+                                error_text.add(error)
+                                avaibility = 0
+                            else: avaibility = 100
                         #### Metrics ####
-                        if avaibility == 100:
-                            memory = instancesconfig[harvesterid][host]['memory']
-                            cpu_warning = instancesconfig[harvesterid][host]['metrics']['cpu_warning']
-                            cpu_critical = instancesconfig[harvesterid][host]['metrics']['cpu_critical']
-                            disk_warning = instancesconfig[harvesterid][host]['metrics']['disk_warning']
-                            disk_critical = instancesconfig[harvesterid][host]['metrics']['disk_critical']
-                            memory_warning = instancesconfig[harvesterid][host]['metrics']['memory_warning']
-                            memory_critical = instancesconfig[harvesterid][host]['metrics']['memory_critical']
-                            #### Metrics DB ####
-                            for metric in metrics[harvesterid][host][heartbeattime]:
-                                cpu_pc = int(metric['cpu_pc'])
-                                if 'volume_data_pc' in metric:
-                                    volume_data_pc = int(metric['volume_data_pc'])
-                                else:
-                                    volume_data_pc = -1
-                                if 'memory_pc' in metric:
-                                    memory_pc = int(metric['memory_pc'])
-                                else:
-                                    memory_pc = int(self.__get_change(memory, metric['rss_mib']))
+                            if avaibility == 100:
+                                memory = instancesconfig[harvesterid][host]['memory']
+                                cpu_warning = instancesconfig[harvesterid][host]['metrics']['cpu']['cpu_warning']
+                                cpu_critical = instancesconfig[harvesterid][host]['metrics']['cpu']['cpu_critical']
+                                disk_warning = instancesconfig[harvesterid][host]['metrics']['disk']['disk_warning']
+                                disk_critical = instancesconfig[harvesterid][host]['metrics']['disk']['disk_critical']
+                                memory_warning = instancesconfig[harvesterid][host]['metrics']['memory']['memory_warning']
+                                memory_critical = instancesconfig[harvesterid][host]['metrics']['memory']['memory_critical']
 
-                                #### Memory ####
-                                if memory_pc >= memory_warning:
-                                    avaibility = 50
-                                    error = "Warning!. Memory consumption: {0}".format(
-                                        str(memory_pc)) + '\n'
-                                    error_text.add(error)
-                                elif memory_pc >= memory_critical:
-                                    avaibility = 0
-                                    error = "Memory consumption: {0}".format(
-                                        str(memory_pc)) + '\n'
-                                    error_text.add(error)
+                                cpu_enable = self.__str_to_bool(
+                                    instancesconfig[harvesterid][host]['metrics']['cpu']['enable'])
+                                disk_enable = self.__str_to_bool(
+                                    instancesconfig[harvesterid][host]['metrics']['disk']['enable'])
+                                memory_enable = self.__str_to_bool(
+                                    instancesconfig[harvesterid][host]['metrics']['memory']['enable'])
 
-                                #### CPU ####
-                                if cpu_pc >= cpu_warning:
-                                    avaibility = 50
-                                    error = "Warning!. CPU utilization: {0}".format(
-                                        str(cpu_pc)) + '\n'
-                                    error_text.add(error)
-                                elif cpu_pc >= cpu_critical:
-                                    avaibility = 10
-                                    error = "CPU utilization: {0}".format(
-                                        str(cpu_pc)) + '\n'
-                                    error_text.add(error)
-
-                                #### HDD ####
-                                if volume_data_pc >= disk_warning:
-                                    avaibility = 50
-                                    error = "Warning!. Disk utilization: {0}".format(
-                                        str(volume_data_pc)) + '\n'
-                                    error_text.add(error)
-                                elif volume_data_pc >= disk_critical:
-                                    avaibility = 10
-                                    error = "Disk utilization: {0}".format(
-                                        str(volume_data_pc)) + '\n'
-                                    error_text.add(error)
-                                #### HDD1 ####
-                                if 'volume_data1_pc' in metric:
-                                    volume_data1_pc = int(metric['volume_data1_pc'])
-                                    if volume_data1_pc >= disk_warning:
-                                        avaibility = 50
-                                        error = "Warning!. Disk 1 utilization: {0}".format(
-                                            str(volume_data1_pc)) + '\n'
-                                        error_text.add(error)
-                                    elif volume_data1_pc >= disk_critical:
-                                        avaibility = 10
-                                        error = "Disk 1 utilization: {0}".format(
-                                            str(volume_data1_pc)) + '\n'
-                                        error_text.add(error)
+                                #### Metrics DB ####
+                                for metric in metrics[harvesterid][host][heartbeattime]:
+                                    #### CPU ####
+                                    if cpu_enable:
+                                        cpu_pc = int(metric['cpu_pc'])
+                                        if cpu_pc >= cpu_warning:
+                                            avaibility = 50
+                                            error = "Warning! CPU utilization: {0}".format(
+                                                str(cpu_pc)) + '\n'
+                                            error_text.add(error)
+                                        elif cpu_pc >= cpu_critical:
+                                            avaibility = 10
+                                            error = "CPU utilization: {0}".format(
+                                                str(cpu_pc)) + '\n'
+                                            error_text.add(error)
+                                    #### Memory ####
+                                    if memory_enable:
+                                        if 'memory_pc' in metric:
+                                            memory_pc = int(metric['memory_pc'])
+                                        else:
+                                            memory_pc = int(self.__get_change(metric['rss_mib'], memory))
+                                        if memory_pc >= memory_warning:
+                                            avaibility = 50
+                                            error = "Warning! Memory consumption: {0}".format(
+                                                str(memory_pc)) + '\n'
+                                            error_text.add(error)
+                                        elif memory_pc >= memory_critical:
+                                            avaibility = 0
+                                            error = "Memory consumption: {0}".format(
+                                                str(memory_pc)) + '\n'
+                                            error_text.add(error)
+                                    #### HDD&HDD1  ####
+                                    if disk_enable:
+                                        if 'volume_data_pc' in metric:
+                                            volume_data_pc = int(metric['volume_data_pc'])
+                                        else:
+                                            volume_data_pc = -1
+                                        if volume_data_pc >= disk_warning:
+                                            avaibility = 50
+                                            error = "Warning! Disk utilization: {0}".format(
+                                                str(volume_data_pc)) + '\n'
+                                            error_text.add(error)
+                                        elif volume_data_pc >= disk_critical:
+                                            avaibility = 10
+                                            error = "Disk utilization: {0}".format(
+                                                str(volume_data_pc)) + '\n'
+                                            error_text.add(error)
+                                        if 'volume_data1_pc' in metric:
+                                            volume_data1_pc = int(metric['volume_data1_pc'])
+                                            if volume_data1_pc >= disk_warning:
+                                                avaibility = 50
+                                                error = "Warning! Disk 1 utilization: {0}".format(
+                                                    str(volume_data1_pc)) + '\n'
+                                                error_text.add(error)
+                                            elif volume_data1_pc >= disk_critical:
+                                                avaibility = 10
+                                                error = "Disk 1 utilization: {0}".format(
+                                                    str(volume_data1_pc)) + '\n'
+                                                error_text.add(error)
                     try:
                         cur.execute("insert into INSTANCES values (?,?,?,?,?,?,?,?,?)",
                                     (str(harvesterid), str(host),
