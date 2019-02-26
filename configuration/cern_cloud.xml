@@ -24,11 +24,10 @@
                         <cpu_critical>80</cpu_critical>
                     </metric>
                     <metric name="disk" enable="True">
-                        <disk_warning>80</disk_warning>
-                        <disk_critical>70</disk_critical>
+                        <disk_warning>70</disk_warning>
+                        <disk_critical>80</disk_critical>
                     </metric>
                 </metrics>
-
             </host>
         </hostlist>
     </instance>
