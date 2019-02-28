@@ -16,7 +16,7 @@ The Harvester service monitoring runs as a cronjob and checks prefedined Harvest
   - [x] Work directory: */data/harvester_service_monitoring*
   - [x] Configuration: */data/harvester_service_monitoring/configuration* . Contains one XML file per harvester instance
   - [x] Internal SQLite cache: */data/harvester_service_monitoring/storage*
-  - [ ] Logging: there is currently no logging
+  - [x] Logging: */data/harvester_service_monitoring/logs*
   - [x] Cronjob: 
 ```
 [root@aipanda179 tmp]# cat /etc/crontab
