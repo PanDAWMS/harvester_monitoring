@@ -1,4 +1,7 @@
 import smtplib
+from logger import ServiceLogger
+
+log = ServiceLogger("notifications").logger
 
 class Notifications:
 
@@ -29,3 +32,4 @@ Subject: {2}
         server = smtplib.SMTP(SERVER)
         server.sendmail(FROM, TO, message)
         server.quit()
+        log.info("Notification message was sent {0}".format(message))

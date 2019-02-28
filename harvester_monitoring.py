@@ -1,14 +1,18 @@
+import os
+import logging
+
 from config import Config
 from sqlite_cache import Sqlite
 from pandadb import PandaDB
 from es import Es
 from notifications import Notifications
+from logger import ServiceLogger
 
 from cernservicexml import ServiceDocument, XSLSPublisher
 
-import os
-
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+log = ServiceLogger("main").logger
 
 def main():
 
@@ -41,7 +45,12 @@ def main():
                     sqlite.update_field('notificated', 0, instance, harvesterhost)
                 host = harvesterhost.split('.')[0]
                 doc = ServiceDocument('harv_{0}_{1}'.format(instance, host), availability=availability, contact=','.join(contacts), availabilitydesc="PandaHarvester instance:{0}".format(instance), availabilityinfo="{0}".format(text))
-                XSLSPublisher.send(doc)
+                try:
+                    XSLSPublisher.send(doc)
+                    log.debug(str(doc.__dict__))
+                except Exception as ex:
+                    log.error(ex.message)
+                    print ex.message
                 doc = {}
 
 if __name__ == "__main__":

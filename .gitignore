@@ -98,4 +98,6 @@ out
 .idea/
 
 # Project stuff
+core/logs/*
+!core/logs/.keep
 

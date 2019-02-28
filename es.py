@@ -2,13 +2,16 @@ from configparser import ConfigParser
 from elasticsearch import Elasticsearch
 from elasticsearch_dsl import Search
 from datetime import datetime, timedelta
+from logger import ServiceLogger
+
+log = ServiceLogger("configuration").logger
 
 class Es:
 
     def __init__(self, path):
         self.connection = self.__make_connection(path= path)
 
-    "private method"
+    # private method
     def __make_connection(self, path, use_ssl=True, verify_certs=False, timeout=30, max_retries=10,
                              retry_on_timeout=True):
         """
@@ -21,8 +24,9 @@ class Es:
             espasswd = cfg.get('server', 'password')
             host = cfg.get('server', 'host')
             port = cfg.get('server', 'port')
-        except:
-            pass
+        except Exception as ex:
+            log.error(ex.message)
+            print ex.message
         try:
             connection = Elasticsearch(
                 [{'host': host, 'port': int(port)}],
@@ -34,8 +38,9 @@ class Es:
                 retry_on_timeout=retry_on_timeout,
             )
             return connection
-        except:
-            pass
+        except Exception as ex:
+            log.error(ex.message)
+            print ex.message
         return None
 
     def get_last_submittedtime(self):
