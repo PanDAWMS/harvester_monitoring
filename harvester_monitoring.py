@@ -12,7 +12,7 @@ from cernservicexml import ServiceDocument, XSLSPublisher
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-log = ServiceLogger("main").logger
+_logger = ServiceLogger("main").logger
 
 def main():
 
@@ -34,7 +34,7 @@ def main():
                 notificated = instances[instance][harvesterhost]['notificated']
                 contacts = instances[instance][harvesterhost]['contacts']
                 text = instances[instance][harvesterhost]['errorsdesc']
-                if (availability == 0 or availability == 10) and notificated == 0:
+                if (availability == 0 or availability == 10 or availability == 50) and notificated == 0:
                     email = Notifications(text=text,
                                           subject='Service issues on {0} {1}'.format(instance, harvesterhost),
                                           to=contacts)
@@ -47,9 +47,9 @@ def main():
                 doc = ServiceDocument('harv_{0}_{1}'.format(instance, host), availability=availability, contact=','.join(contacts), availabilitydesc="PandaHarvester instance:{0}".format(instance), availabilityinfo="{0}".format(text))
                 try:
                     XSLSPublisher.send(doc)
-                    log.debug(str(doc.__dict__))
+                    _logger.debug(str(doc.__dict__))
                 except Exception as ex:
-                    log.error(ex.message)
+                    _logger.error(ex.message)
                     print ex.message
                 doc = {}
 

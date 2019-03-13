@@ -4,7 +4,7 @@ from elasticsearch_dsl import Search
 from datetime import datetime, timedelta
 from logger import ServiceLogger
 
-log = ServiceLogger("configuration").logger
+_logger = ServiceLogger("configuration").logger
 
 class Es:
 
@@ -25,7 +25,7 @@ class Es:
             host = cfg.get('server', 'host')
             port = cfg.get('server', 'port')
         except Exception as ex:
-            log.error(ex.message)
+            _logger.error(ex.message)
             print ex.message
         try:
             connection = Elasticsearch(
@@ -39,7 +39,7 @@ class Es:
             )
             return connection
         except Exception as ex:
-            log.error(ex.message)
+            _logger.error(ex.message)
             print ex.message
         return None
 

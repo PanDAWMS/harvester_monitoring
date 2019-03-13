@@ -2,7 +2,7 @@ import xml.etree.ElementTree as ET
 import os
 from logger import ServiceLogger
 
-log = ServiceLogger("configuration").logger
+_logger = ServiceLogger("configuration").logger
 
 class Config:
 
@@ -53,9 +53,8 @@ class Config:
                                         configuration[harvesterid.attrib['harvesterid']][host.attrib['hostname']][
                                             hostparam.tag] = hostparam.text
 
-            log.debug(str(configuration))
-
+            _logger.debug(str(configuration))
             return configuration
         except Exception as ex:
-            log.error(ex.message)
+            _logger.error(ex.message)
             print ex.message

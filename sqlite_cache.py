@@ -2,7 +2,7 @@ import sqlite3
 from datetime import datetime, timedelta
 from logger import ServiceLogger
 
-log = ServiceLogger("sqlitecache").logger
+_logger = ServiceLogger("sqlitecache").logger
 
 class Sqlite:
     def __init__(self, path, configs = None):
@@ -18,7 +18,7 @@ class Sqlite:
             connection = sqlite3.connect(path)
             return connection
         except sqlite3.Error as ex:
-            log.error(ex.message)
+            _logger.error(ex.message)
             print ex.message
         return None
 
@@ -35,7 +35,7 @@ class Sqlite:
             cur.execute("SELECT * FROM INSTANCES")
             rows = cur.fetchall()
         except sqlite3.Error as ex:
-            log.error(ex.message)
+            _logger.error(ex.message)
         columns = [str(i[0]).lower() for i in cur.description]
         for row in rows:
             object = dict(zip(columns, row))
@@ -78,9 +78,9 @@ class Sqlite:
             cur.execute(query, (value,
                                 harvesterid, harvesterhost))
             connection.commit()
-            log.info("The {0} field was updated by the query '{1}'".format(field, query))
+            _logger.info("The {0} field was updated by the query '{1}'".format(field, query))
         except Exception as ex:
-            log.error(ex.message)
+            _logger.error(ex.message)
 
     def instances_availability(self, lastsubmitedinstance, metrics):
         """
@@ -134,13 +134,13 @@ class Sqlite:
                                     avaibility.append(0)
 
                             #### Metrics ####
-                            memory = instancesconfig[harvesterid][host]['memory']
-                            cpu_warning = instancesconfig[harvesterid][host]['metrics']['cpu']['cpu_warning']
-                            cpu_critical = instancesconfig[harvesterid][host]['metrics']['cpu']['cpu_critical']
-                            disk_warning = instancesconfig[harvesterid][host]['metrics']['disk']['disk_warning']
-                            disk_critical = instancesconfig[harvesterid][host]['metrics']['disk']['disk_critical']
-                            memory_warning = instancesconfig[harvesterid][host]['metrics']['memory']['memory_warning']
-                            memory_critical = instancesconfig[harvesterid][host]['metrics']['memory']['memory_critical']
+                            memory = int(instancesconfig[harvesterid][host]['memory'])
+                            cpu_warning = int(instancesconfig[harvesterid][host]['metrics']['cpu']['cpu_warning'])
+                            cpu_critical = int(instancesconfig[harvesterid][host]['metrics']['cpu']['cpu_critical'])
+                            disk_warning = int(instancesconfig[harvesterid][host]['metrics']['disk']['disk_warning'])
+                            disk_critical = int(instancesconfig[harvesterid][host]['metrics']['disk']['disk_critical'])
+                            memory_warning = int(instancesconfig[harvesterid][host]['metrics']['memory']['memory_warning'])
+                            memory_critical = int(instancesconfig[harvesterid][host]['metrics']['memory']['memory_critical'])
 
                             cpu_enable = self.__str_to_bool(
                                     instancesconfig[harvesterid][host]['metrics']['cpu']['enable'])
@@ -212,31 +212,30 @@ class Sqlite:
                             query = \
                             """insert into INSTANCES values ({0},{1},{2},{3},{4},{5},{6},{7},{8})""".format(str(harvesterid), str(host),
                                          str(lastsubmitedinstance[harvesterid]['harvesterhost'][host]['harvesterhostmaxtime']),
-                                         heartbeattime, 1, 0, min(avaibility) if len(avaibility) > 0 else 100, str(contacts), ', '.join(str(e) for e in error_text))
+                                         heartbeattime, 1, 0, min(avaibility) if len(avaibility) > 0 else 100, str(contacts), ', '.join(str(e) for e in error_text) if len(error_text) > 0 else 'service metrics OK')
                             cur.execute("insert into INSTANCES values (?,?,?,?,?,?,?,?,?)",
                                         (str(harvesterid), str(host),
                                          str(lastsubmitedinstance[harvesterid]['harvesterhost'][host]['harvesterhostmaxtime']),
-                                         heartbeattime, 1, 0, min(avaibility) if len(avaibility) > 0 else 100, str(contacts), ', '.join(str(e) for e in error_text)))
+                                         heartbeattime, 1, 0, min(avaibility) if len(avaibility) > 0 else 100, str(contacts), ', '.join(str(e) for e in error_text) if len(error_text) > 0 else 'service metrics OK'))
                             connection.commit()
                             error_text = set()
-                            log.info("The entry has been added to the cache by query ({0}".format(query))
                         except:
                             query = \
                                 """UPDATE INSTANCES SET lastsubmitted = '{0}', active = {1}, availability = {2}, lastheartbeat = '{3}', contacts = '{4}', errorsdesc = '{5}' WHERE harvesterid = '{6}' and harvesterhost = '{7}'""".format(str(lastsubmitedinstance[harvesterid]['harvesterhost'][host]['harvesterhostmaxtime']),
-                                        1, min(avaibility) if len(avaibility) > 0 else 100, heartbeattime, str(contacts), ', '.join(str(e) for e in error_text), str(harvesterid),
+                                        1, min(avaibility) if len(avaibility) > 0 else 100, heartbeattime, str(contacts), ', '.join(str(e) for e in error_text) if len(error_text) > 0 else 'service metrics OK' , str(harvesterid),
                                         str(host))
                             cur.execute(query)
                             connection.commit()
                             error_text = set()
-                            log.info("The entry has been updated in cache by query ({0}".format(query))
+                            #log.info("The entry has been updated in cache by query ({0}".format(query))
                 else:
                     cur.execute("DELETE FROM INSTANCES WHERE harvesterid = ?", [str(harvesterid)])
                     connection.commit()
         except ValueError as vex:
-            log.error(vex.message)
+            _logger.error(vex.message)
             print vex.message
         except Exception as ex:
-            log.error(ex.message)
+            _logger.error(ex.message)
             print ex.message
 
     # private method

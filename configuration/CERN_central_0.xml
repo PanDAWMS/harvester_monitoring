@@ -10,7 +10,7 @@
                 <memory>6000</memory>
                 <metrics>
                     <metric name="lastsubmittedworker" enable="True">
-                        <value>1d</value>
+                        <value>60d</value>
                     </metric>
                     <metric name="lastheartbeat" enable="True">
                         <value>30</value>
