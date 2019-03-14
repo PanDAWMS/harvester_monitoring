@@ -156,12 +156,12 @@ class Sqlite:
                                     cpu_pc = int(metric['cpu_pc'])
                                     if cpu_pc >= cpu_warning:
                                         avaibility.append(50)
-                                        error = "Warning! CPU utilization: {0}".format(
+                                        error = "Warning! CPU utilization:{0}".format(
                                             str(cpu_pc)) + '\n'
                                         error_text.add(error)
                                     elif cpu_pc >= cpu_critical:
                                         avaibility.append(10)
-                                        error = "CPU utilization: {0}".format(
+                                        error = "CPU utilization:{0}".format(
                                             str(cpu_pc)) + '\n'
                                         error_text.add(error)
                                 #### Memory ####
@@ -172,12 +172,12 @@ class Sqlite:
                                         memory_pc = int(self.__get_change(metric['rss_mib'], memory))
                                     if memory_pc >= memory_warning:
                                         avaibility.append(50)
-                                        error = "Warning! Memory consumption: {0}".format(
+                                        error = "Warning! Memory consumption:{0}".format(
                                             str(memory_pc)) + '\n'
                                         error_text.add(error)
                                     elif memory_pc >= memory_critical:
                                         avaibility.append(0)
-                                        error = "Memory consumption: {0}".format(
+                                        error = "Memory consumption:{0}".format(
                                             str(memory_pc)) + '\n'
                                         error_text.add(error)
                                 #### HDD&HDD1  ####
@@ -188,41 +188,41 @@ class Sqlite:
                                         volume_data_pc = -1
                                     if volume_data_pc >= disk_warning:
                                         avaibility.append(50)
-                                        error = "Warning! Disk utilization: {0}".format(
+                                        error = "Warning! Disk utilization:{0}".format(
                                                 str(volume_data_pc)) + '\n'
                                         error_text.add(error)
                                     elif volume_data_pc >= disk_critical:
                                         avaibility.append(10)
-                                        error = "Disk utilization: {0}".format(
+                                        error = "Disk utilization:{0}".format(
                                                 str(volume_data_pc)) + '\n'
                                         error_text.add(error)
                                     if 'volume_data1_pc' in metric:
                                         volume_data1_pc = int(metric['volume_data1_pc'])
                                         if volume_data1_pc >= disk_warning:
                                             avaibility.append(50)
-                                            error = "Warning! Disk 1 utilization: {0}".format(
+                                            error = "Warning! Disk 1 utilization:{0}".format(
                                                     str(volume_data1_pc)) + '\n'
                                             error_text.add(error)
                                         elif volume_data1_pc >= disk_critical:
                                             avaibility.append(10)
-                                            error = "Disk 1 utilization: {0}".format(
+                                            error = "Disk 1 utilization:{0}".format(
                                                 str(volume_data1_pc)) + '\n'
                                             error_text.add(error)
                         try:
                             query = \
                             """insert into INSTANCES values ({0},{1},{2},{3},{4},{5},{6},{7},{8})""".format(str(harvesterid), str(host),
                                          str(lastsubmitedinstance[harvesterid]['harvesterhost'][host]['harvesterhostmaxtime']),
-                                         heartbeattime, 1, 0, min(avaibility) if len(avaibility) > 0 else 100, str(contacts), ', '.join(str(e) for e in error_text) if len(error_text) > 0 else 'service metrics OK')
+                                         heartbeattime, 1, 0, min(avaibility) if len(avaibility) > 0 else 100, str(contacts), ''.join(str(e) for e in error_text) if len(error_text) > 0 else 'service metrics OK')
                             cur.execute("insert into INSTANCES values (?,?,?,?,?,?,?,?,?)",
                                         (str(harvesterid), str(host),
                                          str(lastsubmitedinstance[harvesterid]['harvesterhost'][host]['harvesterhostmaxtime']),
-                                         heartbeattime, 1, 0, min(avaibility) if len(avaibility) > 0 else 100, str(contacts), ', '.join(str(e) for e in error_text) if len(error_text) > 0 else 'service metrics OK'))
+                                         heartbeattime, 1, 0, min(avaibility) if len(avaibility) > 0 else 100, str(contacts), ''.join(str(e) for e in error_text) if len(error_text) > 0 else 'service metrics OK'))
                             connection.commit()
                             error_text = set()
                         except:
                             query = \
                                 """UPDATE INSTANCES SET lastsubmitted = '{0}', active = {1}, availability = {2}, lastheartbeat = '{3}', contacts = '{4}', errorsdesc = '{5}' WHERE harvesterid = '{6}' and harvesterhost = '{7}'""".format(str(lastsubmitedinstance[harvesterid]['harvesterhost'][host]['harvesterhostmaxtime']),
-                                        1, min(avaibility) if len(avaibility) > 0 else 100, heartbeattime, str(contacts), ', '.join(str(e) for e in error_text) if len(error_text) > 0 else 'service metrics OK' , str(harvesterid),
+                                        1, min(avaibility) if len(avaibility) > 0 else 100, heartbeattime, str(contacts), ''.join(str(e) for e in error_text) if len(error_text) > 0 else 'service metrics OK' , str(harvesterid),
                                         str(host))
                             cur.execute(query)
                             connection.commit()
