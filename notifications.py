@@ -5,7 +5,7 @@ _logger = ServiceLogger("notifications").logger
 
 class Notifications:
 
-    def __init__(self, to, mailserver = "localhost", fromemail="noreply@mail.cern.ch",
+    def __init__(self, to, mailserver = "localhost", fromemail="atlpan@mail.cern.ch",
                                 text='', subject=''):
         self.to = to
         self.mailserver = mailserver
