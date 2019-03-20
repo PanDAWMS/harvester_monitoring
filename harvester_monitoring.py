@@ -34,6 +34,7 @@ def main():
                 notificated = instances[instance][harvesterhost]['notificated']
                 contacts = instances[instance][harvesterhost]['contacts']
                 text = instances[instance][harvesterhost]['errorsdesc']
+                pravailability = instances[instance][harvesterhost]['pravailability']
                 if (availability == 0 or availability == 10 or availability == 50) and notificated == 0:
                     email = Notifications(text=text,
                                           subject='Service issues on {0} {1}'.format(instance, harvesterhost),

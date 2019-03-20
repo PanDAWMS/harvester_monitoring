@@ -50,13 +50,13 @@ class Sqlite:
                     instancesNoneDict[instance['harvesterid']][instance['harvesterhost']] = {
                         'availability': instance['availability'], 'errorsdesc': instance['errorsdesc'],
                         'contacts': instance['contacts'].split(','),
-                        'active': instance['active'], 'notificated': instance['notificated']}
+                        'active': instance['active'], 'notificated': instance['notificated'], 'pravailability': instance['pravailability']}
             elif instance['harvesterid'] in instancesNoneDict:
                 if instance['harvesterhost'] not in instancesNoneDict[instance['harvesterid']]:
                     instancesNoneDict[instance['harvesterid']][instance['harvesterhost']] = {
                         'availability': instance['availability'], 'errorsdesc': instance['errorsdesc'],
                         'contacts': instance['contacts'].split(','),
-                        'active': instance['active'], 'notificated': instance['notificated']}
+                        'active': instance['active'], 'notificated': instance['notificated'], 'pravailability': instance['pravailability']}
                     if 'none' in instancesNoneDict[instance['harvesterid']]:
                         del instancesNoneDict[instance['harvesterid']]['none']
         return instancesNoneDict
@@ -81,6 +81,47 @@ class Sqlite:
             _logger.info("The {0} field was updated by the query '{1}'".format(field, query))
         except Exception as ex:
             _logger.error(ex.message)
+
+    def update_previous_availability(self, harvesterid, harvesterhost, availability):
+        """
+        Update previous availability
+        """
+        connection = self.connection
+        pravailability = availability
+
+        instances = []
+        try:
+            connection.row_factory = sqlite3.Row
+            cur = connection.cursor()
+            query = "SELECT pravailability FROM INSTANCES WHERE harvesterid = ? and harvesterhost = ?"
+
+            cur.execute(query, (harvesterid, harvesterhost))
+
+            rows = cur.fetchall()
+        except sqlite3.Error as ex:
+            _logger.error(ex.message)
+        columns = [str(i[0]).lower() for i in cur.description]
+        for row in rows:
+            pravailability = row[0]
+        if pravailability != availability:
+            try:
+                connection = self.connection
+                query = """UPDATE INSTANCES SET pravailability = ?  WHERE harvesterid = ? and harvesterhost = ?"""
+                cur = connection.cursor()
+
+                cur.execute(query, (pravailability,
+                                harvesterid, harvesterhost))
+                connection.commit()
+
+                query = """UPDATE INSTANCES SET notificated = 0  WHERE harvesterid = ? and harvesterhost = ?"""
+                cur = connection.cursor()
+
+                cur.execute(query, (pravailability,
+                                    harvesterid, harvesterhost))
+                connection.commit()
+
+            except Exception as ex:
+                _logger.error(ex.message)
 
     def instances_availability(self, lastsubmitedinstance, metrics):
         """
@@ -210,22 +251,26 @@ class Sqlite:
                                             error_text.add(error)
                         try:
                             query = \
-                            """insert into INSTANCES values ({0},{1},{2},{3},{4},{5},{6},{7},{8})""".format(str(harvesterid), str(host),
+                            """insert into INSTANCES values ({0},{1},{2},{3},{4},{5},{6},{7},{8},{9})""".format(str(harvesterid), str(host),
                                          str(lastsubmitedinstance[harvesterid]['harvesterhost'][host]['harvesterhostmaxtime']),
-                                         heartbeattime, 1, 0, min(avaibility) if len(avaibility) > 0 else 100, str(contacts), ''.join(str(e) for e in error_text) if len(error_text) > 0 else 'service metrics OK')
-                            cur.execute("insert into INSTANCES values (?,?,?,?,?,?,?,?,?)",
+                                         heartbeattime, 1, 0, min(avaibility) if len(avaibility) > 0 else 100, str(contacts), ''.join(str(e) for e in error_text) if len(error_text) > 0 else 'service metrics OK', min(avaibility) if len(avaibility) > 0 else 100)
+
+                            cur.execute("insert into INSTANCES values (?,?,?,?,?,?,?,?,?,?)",
                                         (str(harvesterid), str(host),
                                          str(lastsubmitedinstance[harvesterid]['harvesterhost'][host]['harvesterhostmaxtime']),
-                                         heartbeattime, 1, 0, min(avaibility) if len(avaibility) > 0 else 100, str(contacts), ''.join(str(e) for e in error_text) if len(error_text) > 0 else 'service metrics OK'))
+                                         heartbeattime, 1, 0, min(avaibility) if len(avaibility) > 0 else 100, str(contacts), ''.join(str(e) for e in error_text) if len(error_text) > 0 else 'service metrics OK', min(avaibility) if len(avaibility) > 0 else 100))
                             connection.commit()
                             error_text = set()
                         except:
+                            avaibility = min(avaibility) if len(avaibility) > 0 else 100
                             query = \
                                 """UPDATE INSTANCES SET lastsubmitted = '{0}', active = {1}, availability = {2}, lastheartbeat = '{3}', contacts = '{4}', errorsdesc = '{5}' WHERE harvesterid = '{6}' and harvesterhost = '{7}'""".format(str(lastsubmitedinstance[harvesterid]['harvesterhost'][host]['harvesterhostmaxtime']),
-                                        1, min(avaibility) if len(avaibility) > 0 else 100, heartbeattime, str(contacts), ''.join(str(e) for e in error_text) if len(error_text) > 0 else 'service metrics OK' , str(harvesterid),
+                                        1, avaibility, heartbeattime, str(contacts), ''.join(str(e) for e in error_text) if len(error_text) > 0 else 'service metrics OK', str(harvesterid),
                                         str(host))
                             cur.execute(query)
+                            self.update_previous_availability(str(harvesterid), str(host), avaibility)
                             connection.commit()
+
                             error_text = set()
                             #log.info("The entry has been updated in cache by query ({0}".format(query))
                 else:
