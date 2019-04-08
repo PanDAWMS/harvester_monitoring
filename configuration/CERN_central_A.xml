@@ -8,7 +8,7 @@
                     <email>forcontact@mail.com</email>
                 </contacts>
                 <memory>6000</memory>
-                <metrics>
+                <metrics warning_delay="6h" critical_delay="6h">
                     <metric name="lastsubmittedworker" enable="True">
                         <value>30</value>
                     </metric>
@@ -24,8 +24,8 @@
                         <cpu_critical>80</cpu_critical>
                     </metric>
                     <metric name="disk" enable="True">
-                        <disk_warning>80</disk_warning>
-                        <disk_critical>70</disk_critical>
+                        <disk_warning>70</disk_warning>
+                        <disk_critical>80</disk_critical>
                     </metric>
                 </metrics>
             </host>

@@ -38,6 +38,10 @@ class Config:
                                                 configuration[harvesterid.attrib['harvesterid']][host.attrib['hostname']][hostparam.tag])
                                     elif hostparam.tag == 'metrics':
                                         configuration[harvesterid.attrib['harvesterid']][host.attrib['hostname']][hostparam.tag] = {}
+                                        # delay
+                                        for delay in hostparam.attrib:
+                                            configuration[harvesterid.attrib['harvesterid']][host.attrib['hostname']][
+                                                hostparam.tag][delay] =  hostparam.attrib[delay]
                                         for metrics in hostparam:
                                             configuration[harvesterid.attrib['harvesterid']][host.attrib['hostname']][
                                                 hostparam.tag][

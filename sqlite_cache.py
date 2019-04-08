@@ -24,7 +24,7 @@ class Sqlite:
 
     def get_instances(self):
         """
-        Getting instances from SQLite cache
+        Get instances from SQLite cache
         """
         connection = self.connection
 
@@ -61,9 +61,52 @@ class Sqlite:
                         del instancesNoneDict[instance['harvesterid']]['none']
         return instancesNoneDict
 
-    def update_field(self, field, value, harvesterid, harvesterhost):
+    def get_history_logs(self, harvesterid, harvesterhost):
         """
-        Query update field in SQLite cache
+        Get historylog from SQLite cache
+        """
+        connection = self.connection
+
+        history = []
+        try:
+            connection.row_factory = sqlite3.Row
+            cur = connection.cursor()
+            cur.execute("SELECT checkmetrictime,notificationtime,availability,notificated,fulltext FROM HISTORYLOG "
+                        "WHERE harvesterid = '{0}' and harvesterhost = '{1}'".format(
+                harvesterid, harvesterhost))
+            rows = cur.fetchall()
+        except sqlite3.Error as ex:
+            _logger.error(ex.message)
+        columns = [str(i[0]).lower() for i in cur.description]
+        for row in rows:
+            object = dict(zip(columns, row))
+            history.append(object)
+        return history
+
+    def get_checktime(self, harvesterid, harvesterhost, typeoferror, textoferror):
+        """
+        Get checkmetrictime from SQLite cache
+        """
+        connection = self.connection
+
+        history = []
+        try:
+            connection.row_factory = sqlite3.Row
+            cur = connection.cursor()
+            cur.execute("SELECT checkmetrictime FROM HISTORYLOG "
+                        "WHERE harvesterid = '{0}' and harvesterhost = '{1}' and typeoferror = '{2}' and textoferror = '{3}'".format(harvesterid, harvesterhost, typeoferror, textoferror))
+            rows = cur.fetchall()
+        except sqlite3.Error as ex:
+            _logger.error(ex.message)
+        columns = [str(i[0]).lower() for i in cur.description]
+        for row in rows:
+            history = dict(zip(columns, row))
+            #history.append(object)
+        return history
+
+    def update_entry(self, field, table, value, harvesterid, harvesterhost, checkmetrictime=''):
+        """
+        Query update entry in SQLite cache
         :param conn: the Connection object
         :param field: column name in SQLite database
         :param value: value of the column name in SQLite database
@@ -72,7 +115,10 @@ class Sqlite:
         """
         try:
             connection = self.connection
-            query = """UPDATE INSTANCES SET {0} = ?  WHERE harvesterid = ? and harvesterhost = ?""".format(field)
+            if checkmetrictime == '':
+                query = """UPDATE {1} SET {0} = ?  WHERE harvesterid = ? and harvesterhost = ?""".format(table, field)
+            else:
+                query = """UPDATE {1} SET {0} = ?  WHERE harvesterid = ? and harvesterhost = ? and checkmetrictime = '{2}'""".format(table, field, checkmetrictime)
             cur = connection.cursor()
 
             cur.execute(query, (value,
@@ -81,6 +127,19 @@ class Sqlite:
             _logger.info("The {0} field was updated by the query '{1}'".format(field, query))
         except Exception as ex:
             _logger.error(ex.message)
+
+    def __delete_history_availability(self, harvesterid, harvesterhost, typeoferror, textoferror):
+        """
+        Delete history in SQLite cache
+        """
+        connection = self.connection
+        cur = connection.cursor()
+        connection.row_factory = sqlite3.Row
+        cur.execute(
+            "DELETE FROM HISTORYLOG "
+            "WHERE harvesterid = '{0}' and harvesterhost = '{1}' and typeoferror = '{2}' and textoferror = '{3}'".format(
+                harvesterid, harvesterhost, typeoferror, textoferror))
+        connection.commit()
 
     def update_previous_availability(self, harvesterid, harvesterhost, availability):
         """
@@ -116,8 +175,7 @@ class Sqlite:
                 query = """UPDATE INSTANCES SET notificated = 0  WHERE harvesterid = ? and harvesterhost = ?"""
                 cur = connection.cursor()
 
-                cur.execute(query, (pravailability,
-                                    harvesterid, harvesterhost))
+                cur.execute(query, (harvesterid, harvesterhost))
                 connection.commit()
 
             except Exception as ex:
@@ -162,6 +220,12 @@ class Sqlite:
                                             'harvesterhostmaxtime'])) + '\n'
                                     error_text.add(error)
                                     avaibility.append(0)
+                                    self.__insert_history_availability(harvesterid=harvesterid, harvesterhost=host,
+                                                                     typeoferror='critical', textoferror='submitted',
+                                                                       availability = 0, notificated=0, fulltext=error)
+                                else:
+                                    self.__delete_history_availability(harvesterid=harvesterid, harvesterhost=host,
+                                                                     typeoferror='critical', textoferror='submitted')
                             if harvesterid in metrics:
                                 ### No heartbeat ###
                                 heartbeattime = metrics[harvesterid][host].keys()[0]
@@ -173,6 +237,12 @@ class Sqlite:
                                         str(heartbeattime)) + '\n'
                                     error_text.add(error)
                                     avaibility.append(0)
+                                    self.__insert_history_availability(harvesterid=harvesterid, harvesterhost=host,
+                                                                     typeoferror='critical', textoferror='heartbeat',
+                                                                       availability = 0, notificated=0, fulltext=error)
+                                else:
+                                    self.__delete_history_availability(harvesterid=harvesterid, harvesterhost=host,
+                                                                     typeoferror='critical', textoferror='heartbeat')
 
                             #### Metrics ####
                             memory = int(instancesconfig[harvesterid][host]['memory'])
@@ -200,11 +270,17 @@ class Sqlite:
                                         error = "Warning! CPU utilization:{0}".format(
                                             str(cpu_pc)) + '\n'
                                         error_text.add(error)
+                                        self.__insert_history_availability(harvesterid = harvesterid, harvesterhost = host,
+                                                    typeoferror='warning', textoferror= 'cpu' ,
+                                                                           availability = 50, notificated=0, fulltext=error)
                                     elif cpu_pc >= cpu_critical:
                                         avaibility.append(10)
                                         error = "CPU utilization:{0}".format(
                                             str(cpu_pc)) + '\n'
                                         error_text.add(error)
+                                        self.__insert_history_availability(harvesterid = harvesterid, harvesterhost = host,
+                                                                         typeoferror='critical', textoferror= 'cpu',
+                                                                           availability = 10, notificated=0, fulltext=error)
                                 #### Memory ####
                                 if memory_enable:
                                     if 'memory_pc' in metric:
@@ -216,11 +292,17 @@ class Sqlite:
                                         error = "Warning! Memory consumption:{0}".format(
                                             str(memory_pc)) + '\n'
                                         error_text.add(error)
+                                        self.__insert_history_availability(harvesterid = harvesterid, harvesterhost = host,
+                                                                         typeoferror='warning', textoferror= 'memory',
+                                                                           availability = 50, notificated=0, fulltext=error)
                                     elif memory_pc >= memory_critical:
-                                        avaibility.append(0)
+                                        avaibility.append(10)
                                         error = "Memory consumption:{0}".format(
                                             str(memory_pc)) + '\n'
                                         error_text.add(error)
+                                        self.__insert_history_availability(harvesterid = harvesterid, harvesterhost = host,
+                                                                         typeoferror='critical', textoferror= 'memory',
+                                                                           availability = 10, notificated=0, fulltext=error)
                                 #### HDD&HDD1  ####
                                 if disk_enable:
                                     if 'volume_data_pc' in metric:
@@ -232,11 +314,17 @@ class Sqlite:
                                         error = "Warning! Disk utilization:{0}".format(
                                                 str(volume_data_pc)) + '\n'
                                         error_text.add(error)
+                                        self.__insert_history_availability(harvesterid = harvesterid, harvesterhost = host,
+                                                                         typeoferror='warning', textoferror= 'disk',
+                                                                           availability = 50, notificated=0, fulltext=error)
                                     elif volume_data_pc >= disk_critical:
                                         avaibility.append(10)
                                         error = "Disk utilization:{0}".format(
                                                 str(volume_data_pc)) + '\n'
                                         error_text.add(error)
+                                        self.__insert_history_availability(harvesterid = harvesterid, harvesterhost = host,
+                                                                         typeoferror='critical', textoferror = 'disk',
+                                                                           availability = 10, notificated=0, fulltext=error)
                                     if 'volume_data1_pc' in metric:
                                         volume_data1_pc = int(metric['volume_data1_pc'])
                                         if volume_data1_pc >= disk_warning:
@@ -244,11 +332,22 @@ class Sqlite:
                                             error = "Warning! Disk 1 utilization:{0}".format(
                                                     str(volume_data1_pc)) + '\n'
                                             error_text.add(error)
+                                            self.__insert_history_availability(harvesterid=harvesterid,
+                                                                               harvesterhost=host,
+                                                                               typeoferror='warning',
+                                                                               textoferror='disk1', availability = 50,
+                                                                               notificated=0,
+                                                                               fulltext=error)
                                         elif volume_data1_pc >= disk_critical:
                                             avaibility.append(10)
                                             error = "Disk 1 utilization:{0}".format(
                                                 str(volume_data1_pc)) + '\n'
                                             error_text.add(error)
+                                            self.__insert_history_availability(harvesterid=harvesterid,
+                                                                               harvesterhost=host,
+                                                                               typeoferror='critical',
+                                                                               textoferror='disk1', availability = 10,
+                                                                               fulltext=error)
                         try:
                             query = \
                             """insert into INSTANCES values ({0},{1},{2},{3},{4},{5},{6},{7},{8},{9})""".format(str(harvesterid), str(host),
@@ -272,7 +371,7 @@ class Sqlite:
                             connection.commit()
 
                             error_text = set()
-                            #log.info("The entry has been updated in cache by query ({0}".format(query))
+                            #logger.info("The entry has been updated in cache by query ({0}".format(query))
                 else:
                     cur.execute("DELETE FROM INSTANCES WHERE harvesterid = ?", [str(harvesterid)])
                     connection.commit()
@@ -282,7 +381,50 @@ class Sqlite:
         except Exception as ex:
             _logger.error(ex.message)
             print ex.message
+    # private method
+    def __insert_history_availability(self, harvesterid, harvesterhost, typeoferror, textoferror,
+                                      availability, notificated, fulltext):
+        """
+        Write history of errors to SQLite cache
+        """
+        connection = self.connection
+        cur = connection.cursor()
+        connection.row_factory = sqlite3.Row
 
+        history = self.get_checktime(harvesterid, harvesterhost, typeoferror, textoferror)
+
+        if len(history)>0:
+            ckeckmetrictime = datetime.strptime(history['checkmetrictime'], "%Y-%m-%d %H:%M:%S.%f")
+            if typeoferror == 'warning' and textoferror not in ['heartbeat', 'submitted']:
+                if 'warning_delay' in self.instancesconfigs[harvesterid][harvesterhost]['metrics']:
+                    warning_delay = self.__get_timedelta(self.instancesconfigs[harvesterid][harvesterhost]['metrics']['warning_delay'])
+                else:
+                    warning_delay = self.__get_timedelta('6h')
+                if ckeckmetrictime < datetime.utcnow() - warning_delay:
+                    cur.execute(
+                        "DELETE FROM HISTORYLOG "
+                        "WHERE harvesterid = '{0}' and harvesterhost = '{1}' and typeoferror = '{2}' and textoferror = '{3}'".format(
+                            harvesterid, harvesterhost, typeoferror, textoferror))
+                    connection.commit()
+            elif typeoferror == 'critical' and textoferror not in ['heartbeat', 'submitted']:
+                if 'critical_delay' in self.instancesconfigs[harvesterid][harvesterhost]['metrics']:
+                    critical_delay = self.__get_timedelta(self.instancesconfigs[harvesterid][harvesterhost]['metrics']['critical_delay'])
+                else:
+                    critical_delay = self.__get_timedelta('6h')
+                if ckeckmetrictime < datetime.utcnow() - critical_delay:
+                    cur.execute(
+                        "DELETE FROM HISTORYLOG "
+                        "WHERE harvesterid = '{0}' and harvesterhost = '{1}' and typeoferror = '{2}' and textoferror = '{3}'".format(
+                            harvesterid, harvesterhost, typeoferror, textoferror))
+                    connection.commit()
+        try:
+            cur.execute(
+                "insert into HISTORYLOG (harvesterid,harvesterhost,checkmetrictime,typeoferror,textoferror,availability,notificated,fulltext) values (?,?,?,?,?,?,?,?)",
+                    (harvesterid, harvesterhost, str(datetime.utcnow()), typeoferror, textoferror, availability,
+                        notificated, fulltext))
+            connection.commit()
+        except:
+            pass
     # private method
     def __get_change(self, current, previous):
         """

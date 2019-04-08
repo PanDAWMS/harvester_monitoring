@@ -8,7 +8,7 @@
                     <email>forcontact@mail.com</email>
                 </contacts>
                 <memory>6000</memory>
-                <metrics>
+                <metrics warning_delay="6h" critical_delay="6h">
                     <metric name="lastsubmittedworker" enable="True">
                         <value>60d</value>
                     </metric>
