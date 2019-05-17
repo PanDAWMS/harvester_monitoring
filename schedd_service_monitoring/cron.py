@@ -23,7 +23,8 @@ def logstash_configs():
         cfg.read('cron_settings.ini')
         url = cfg.get('logstash', 'url')
         port = cfg.get('logstash', 'port')
-        auth = cfg.get('logstash', 'auth')
+        auth = cfg.get('logstash', 'auth').split(',')
+        auth = (auth[0],auth[1])
         return url, port, auth
     except:
         return None, None, None
