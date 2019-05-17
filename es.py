@@ -49,7 +49,7 @@ class Es:
         """
         connection = self.connection
 
-        s = Search(using=connection, index='atlas_harvesterworkers')[:0]
+        s = Search(using=connection, index='atlas_harvesterworkers-*')[:0]
 
         s.aggs.bucket('harvesterid', 'terms', field='harvesterid.keyword', size=1000) \
             .metric('max_submittime', 'max', field='submittime') \
@@ -87,7 +87,6 @@ class Es:
         """
         TODO: need to test
         """
-
         s = Search(using=self.connection, index='atlas_harvesterlogs-*').filter('range', **{
             '@timestamp': {'gte': 'now-30m', 'lte': 'now'}}).filter('terms', tags=['error'])
         s = s.scan()
