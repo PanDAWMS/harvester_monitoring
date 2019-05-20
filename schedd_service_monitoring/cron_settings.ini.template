@@ -1,11 +1,11 @@
 [pandadb]
-login:
-password:
-description:
+login: DB_USER
+password: DB_PASSWORD
+description: DB_DESCRIPTION
 [logstash]
-auth:
-url:
-port:
+auth: pandametrics,PanDA
+url: host
+port: port
 [othersettings]
 disks: cephfs,data,data1,data2
 processes: condor_schedd,condor_collector,condor_negotiator

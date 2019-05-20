@@ -5,10 +5,10 @@ import getopt
 from configparser import ConfigParser
 import subprocess, socket, re, cx_Oracle, requests, json
 
-import smtplib
 from logger import ServiceLogger
 
 _logger = ServiceLogger("cron").logger
+
 
 def make_db_connection(cfg):
     try:
@@ -16,6 +16,7 @@ def make_db_connection(cfg):
         dbpasswd = cfg.get('pandadb', 'password')
         description = cfg.get('pandadb', 'description')
     except:
+        _logger.error('Settings for Oracle connection not found')
         return None
     try:
         connection = cx_Oracle.connect(dbuser, dbpasswd, description)
@@ -24,6 +25,7 @@ def make_db_connection(cfg):
     except Exception as ex:
         _logger.error(ex)
         return None
+
 
 def logstash_configs(cfg):
     try:
@@ -37,6 +39,7 @@ def logstash_configs(cfg):
         _logger.error('Settings for logstash not found')
         return None, None, None
 
+
 def servers_configs(cfg):
     try:
         disk_list = [x.strip() for x in cfg.get('othersettings', 'disks').split(',')]
@@ -47,10 +50,12 @@ def servers_configs(cfg):
         _logger.error('Settings for servers configs not found')
         return None, None
 
+
 class DateTimeEncoder(json.JSONEncoder):
     def default(self, o):
         if isinstance(o, datetime):
             return o.isoformat()
+
 
 def volume_use(volume_name):
     command = "df -Pkh /" + volume_name
@@ -72,6 +77,7 @@ def volume_use(volume_name):
 
     return used_amount_float
 
+
 def process_availability(process_name):
     availability = '0'
     avail_info = '{0} process not found'.format(process_name)
@@ -88,6 +94,7 @@ def process_availability(process_name):
         avail_info = '{0} running'.format(process_name)
 
     return availability, avail_info
+
 
 def get_workers(submissionhost, settings):
     dict = {}
@@ -119,6 +126,7 @@ def get_workers(submissionhost, settings):
         finally:
             if cursor is not None:
                 cursor.close()
+
 
 def send_data(data, settings):
    url, port, auth = logstash_configs(settings)
@@ -155,6 +163,7 @@ def get_settings_path(argv):
        _logger.error('Settings file not found. {0}'.format(path))
    return None
 
+
 def main():
     settings_path = get_settings_path(sys.argv[1:])
     if settings_path is not None:
@@ -176,4 +185,5 @@ def main():
         dict['creation_time'] = datetime.utcnow()
         send_data(json.dumps(dict, cls=DateTimeEncoder), settings_path)
 
-main()
+if __name__=='__main__':
+    main()
