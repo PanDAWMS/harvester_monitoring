@@ -1,11 +1,17 @@
+import sys
 from datetime import datetime
+
+import getopt
 from configparser import ConfigParser
 import subprocess, socket, re, cx_Oracle, requests, json
 
-def make_db_connection():
+import smtplib
+from logger import ServiceLogger
+
+_logger = ServiceLogger("cron").logger
+
+def make_db_connection(cfg):
     try:
-        cfg = ConfigParser()
-        cfg.read('cron_settings.ini')
         dbuser = cfg.get('pandadb', 'login')
         dbpasswd = cfg.get('pandadb', 'password')
         description = cfg.get('pandadb', 'description')
@@ -13,30 +19,32 @@ def make_db_connection():
         return None
     try:
         connection = cx_Oracle.connect(dbuser, dbpasswd, description)
+        _logger.debug('DB connection established. "{0}" "{1}"'.format(dbuser, description))
         return connection
-    except:
+    except Exception as ex:
+        _logger.error(ex)
         return None
 
-def logstash_configs():
+def logstash_configs(cfg):
     try:
-        cfg = ConfigParser()
-        cfg.read('cron_settings.ini')
         url = cfg.get('logstash', 'url')
         port = cfg.get('logstash', 'port')
-        auth = cfg.get('logstash', 'auth').split(',')
+        auth = [x.strip() for x in cfg.get('logstash', 'auth').split(',')]
         auth = (auth[0],auth[1])
+        _logger.debug('Logstash settings have been read. "{0}" "{1}" "{2}"'.format(url, port, auth))
         return url, port, auth
     except:
+        _logger.error('Settings for logstash not found')
         return None, None, None
 
-def servers_configs():
+def servers_configs(cfg):
     try:
-        cfg = ConfigParser()
-        cfg.read('cron_settings.ini')
-        disk_list = list(cfg.get('othersettings', 'disks').split(','))
-        process_list = list(cfg.get('othersettings', 'processes').split(','))
+        disk_list = [x.strip() for x in cfg.get('othersettings', 'disks').split(',')]
+        process_list = [x.strip() for x in cfg.get('othersettings', 'processes').split(',')]
+        _logger.debug('Server settings have been read. Disk list: {0}. Process list: {1}'.format(disk_list, process_list))
         return disk_list, process_list,
     except:
+        _logger.error('Settings for servers configs not found')
         return None, None
 
 class DateTimeEncoder(json.JSONEncoder):
@@ -55,6 +63,8 @@ def volume_use(volume_name):
     for line in output.split('\n'):
         if re.search(volume_name, line):
             used_amount = re.search(r"(\d+)\%", line).group(1)
+        else:
+            _logger.debug('df: "{0}": No such file or directory'.format(volume_name))
     try:
         used_amount_float = float(used_amount)
     except ValueError:
@@ -79,7 +89,7 @@ def process_availability(process_name):
 
     return availability, avail_info
 
-def get_workers(submissionhost):
+def get_workers(submissionhost, settings):
     dict = {}
 
     query = """
@@ -93,7 +103,7 @@ def get_workers(submissionhost):
         atlas_panda.harvester_workers WHERE SUBMITTIME > CAST (sys_extract_utc(SYSTIMESTAMP) - interval '30' minute as DATE) AND SUBMISSIONHOST like '{0}%') GROUP BY status
     """.format(submissionhost)
 
-    connection = make_db_connection()
+    connection = make_db_connection(settings)
 
     with connection:
         sum = 0
@@ -110,30 +120,60 @@ def get_workers(submissionhost):
             if cursor is not None:
                 cursor.close()
 
-def send_data(data):
-   url, port, auth = logstash_configs()
-   requests.post(
+def send_data(data, settings):
+   url, port, auth = logstash_configs(settings)
+   try:
+        code = requests.post(
         url='http://{0}:{1}'.format(url, port),
         data=data,
         auth=auth)
+        if code.status_code == 200:
+            _logger.debug('Status code: {0}'.format(code.status_code))
+        else:
+            _logger.error('Status code: {0}'.format(code.status_code))
+   except Exception as ex:
+        _logger.debug('Data can not be sent. {0}'.format(ex))
+
+
+def get_settings_path(argv):
+   cfg = ConfigParser()
+
+   path = ''
+   try:
+      opts, args = getopt.getopt(argv,"hi:s:",["settings="])
+   except getopt.GetoptError:
+      sys.exit(2)
+   for opt, arg in opts:
+      if opt == '-s' or opt == '-settings':
+          path = str(arg)
+   if path == '':
+       path = 'cron_settings.ini'
+   cfg.read(path)
+   if cfg.has_section('logstash') and cfg.has_section('logstash') and cfg.has_section('logstash'):
+       return cfg
+   else:
+       _logger.error('Settings file not found. {0}'.format(path))
+   return None
 
 def main():
-    hostname = socket.gethostname()
-    disk_list, process_list = servers_configs()
+    settings_path = get_settings_path(sys.argv[1:])
+    if settings_path is not None:
+        hostname = socket.gethostname()
+        disk_list, process_list = servers_configs(settings_path)
 
-    dict = get_workers(hostname)
+        dict = get_workers(hostname, settings_path)
 
-    dict['submitssionhost'] = hostname
+        dict['submitssionhost'] = hostname
 
-    for disk in disk_list:
-        dict['disk_usage_'+disk] = volume_use(disk)
+        for disk in disk_list:
+            dict['disk_usage_'+disk] = volume_use(disk)
 
-    for process in process_list:
-        proc_avail, proc_avail_info = process_availability(process)
-        dict[process] = proc_avail
-        dict[process+'_info'] = proc_avail_info
+        for process in process_list:
+            proc_avail, proc_avail_info = process_availability(process)
+            dict[process] = proc_avail
+            dict[process+'_info'] = proc_avail_info
 
-    dict['creation_time'] = datetime.utcnow()
-    send_data(json.dumps(dict, cls=DateTimeEncoder))
+        dict['creation_time'] = datetime.utcnow()
+        send_data(json.dumps(dict, cls=DateTimeEncoder), settings_path)
 
 main()
