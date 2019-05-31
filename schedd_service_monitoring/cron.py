@@ -172,7 +172,7 @@ def main():
 
         dict = get_workers(hostname, settings_path)
 
-        dict['submitssionhost'] = hostname
+        dict['submissionhost'] = hostname
 
         for disk in disk_list:
             dict['disk_usage_'+disk] = volume_use(disk)
