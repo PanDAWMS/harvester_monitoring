@@ -25,7 +25,7 @@ def main():
     dictHarvesterHosts, dictHarvesterInstnaces = es.get_last_submittedtime()
     sqlite.instances_availability(dictHarvesterInstnaces, metrics)
 
-    instances = sqlite.get_instances()
+    instances = sqlite.get_data()
 
     for instance in instances:
         for harvesterhost in instances[instance]:

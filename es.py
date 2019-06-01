@@ -1,6 +1,6 @@
 from configparser import ConfigParser
 from elasticsearch import Elasticsearch
-from elasticsearch_dsl import Search
+from elasticsearch_dsl import Search, Q, A
 from datetime import datetime, timedelta
 from logger import ServiceLogger
 
@@ -91,3 +91,40 @@ class Es:
             '@timestamp': {'gte': 'now-30m', 'lte': 'now'}}).filter('terms', tags=['error'])
         s = s.scan()
         return None
+
+    def get_schedd_metrics(self):
+        """
+        Get last schedd metrics
+        """
+        connection = self.connection
+
+        s = Search(using=connection, index='atlas_scheddmetrics-*')[:0]
+
+        s.aggs.bucket('submissionhost', 'terms', field='submissionhost.keyword', size=1000) \
+        .metric('last_entry', 'top_hits', size=1, _source=['creation_time','condor_collector','condor_negotiator',
+                                                     'condor_schedd','disk_usage_cephfs','disk_usage_data',
+                                                     'disk_usage_data1','disk_usage_data1','disk_usage_data2',
+                                                     'n_workers_created_total'
+                                                     ], sort=[{'creation_time': 'desc'}])\
+        .metric('creation_time', 'max', field='creation_time')
+
+        s = s.execute()
+
+        submissionhostDict = {}
+
+        for hit in s.aggregations.submissionhost:
+            submissionhostDict[hit.key] = {}
+            for key in hit.last_entry.hits.hits[0]['_source']:
+                submissionhostDict[hit.key][key] = hit.last_entry.hits.hits[0]['_source'][key]
+
+        s = Search(using=connection, index='atlas_harvesterworkers-*')[:0]
+
+        s.aggs.bucket('submissionhost', 'terms', field='submissionhost.keyword', size=1000) \
+        .metric('max_submittime', 'max', field='submittime')
+        s = s.execute()
+
+        for hit in s.aggregations.submissionhost:
+            key = str(hit.key).split(',')[0]
+            if key in submissionhostDict:
+                submissionhostDict[key]['last_submittime'] = datetime.strptime(hit.max_submittime.value_as_string, '%Y-%m-%dT%H:%M:%S.000Z')
+        return submissionhostDict

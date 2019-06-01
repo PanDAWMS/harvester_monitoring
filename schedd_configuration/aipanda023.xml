@@ -1,0 +1,23 @@
+<?xml version="1.0"?>
+<submissionhosts>
+    <submissionhost hostname="aipanda023.cern.ch" submissionhostenable="True">
+                <contacts>
+                    <email>forcontact@mail.com</email>
+                    <email>forcontact@mail.com</email>
+                </contacts>
+                <metrics warning_delay="6h" critical_delay="6h">
+                    <metric name="lastsubmittedworker" enable="True">
+                        <value>30m</value>
+                    </metric>
+                    <metric name="disk" enable="True">
+                        <disk_warning>80</disk_warning>
+                        <disk_critical>90</disk_critical>
+                    </metric>
+                    <metric name="processes" enable="True">
+                        <process enable="True">collector</process>
+                        <process enable="True">negotiator</process>
+                        <process enable="True">schedd</process>
+                    </metric>
+                </metrics>
+    </submissionhost>
+</submissionhosts>
