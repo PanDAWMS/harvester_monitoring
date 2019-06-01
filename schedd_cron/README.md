@@ -6,6 +6,20 @@ The schedd service monitoring watches health metrics on the HTCondor schedd's us
 - Disk space availability
 - Processes are running
 
+## Basic operations
+- Node: aipanda179
+- Important folders:
+  - [x] Work directory: */data/harvester_service_monitoring*
+  - [x] Configuration: */data/harvester_service_monitoring/schedd_configuration* . Contains one XML file per submissionhost
+  - [x] Internal SQLite cache: */data/harvester_service_monitoring/storage*
+  - [x] Logging: */data/harvester_service_monitoring/logs*
+  - [x] Cronjob: 
+```
+[root@aipanda179 tmp]# cat /etc/crontab
+...
+*/10 * * * * root /usr/bin/python /data/harvester_service_monitoring/schedd_monitoring.py > /dev/null 2>&1
+```
+
 ## Installation
 
 ### Cronjob
