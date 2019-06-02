@@ -284,7 +284,7 @@ class Sqlite:
                                 #### CPU ####
                                 if cpu_enable:
                                     cpu_pc = int(metric['cpu_pc'])
-                                    if cpu_pc >= cpu_warning:
+                                    if cpu_pc >= cpu_warning and cpu_pc < cpu_critical:
                                         avaibility.append(50)
                                         error = "Warning! CPU utilization:{0}".format(
                                             str(cpu_pc)) + '\n'
@@ -306,7 +306,7 @@ class Sqlite:
                                         memory_pc = int(metric['memory_pc'])
                                     else:
                                         memory_pc = int(self.__get_change(metric['rss_mib'], memory))
-                                    if memory_pc >= memory_warning:
+                                    if memory_pc >= memory_warning and memory_pc < memory_critical:
                                         avaibility.append(50)
                                         error = "Warning! Memory consumption:{0}".format(
                                             str(memory_pc)) + '\n'
@@ -328,7 +328,7 @@ class Sqlite:
                                         volume_data_pc = int(metric['volume_data_pc'])
                                     else:
                                         volume_data_pc = -1
-                                    if volume_data_pc >= disk_warning:
+                                    if volume_data_pc >= disk_warning and volume_data_pc < disk_critical:
                                         avaibility.append(50)
                                         error = "Warning! Disk utilization:{0}".format(
                                                 str(volume_data_pc)) + '\n'
@@ -346,7 +346,7 @@ class Sqlite:
                                                                            availability=10, notificated=0, fulltext=error)
                                     if 'volume_data1_pc' in metric:
                                         volume_data1_pc = int(metric['volume_data1_pc'])
-                                        if volume_data1_pc >= disk_warning:
+                                        if volume_data1_pc >= disk_warning and volume_data1_pc < disk_critical:
                                             avaibility.append(50)
                                             error = "Warning! Disk 1 utilization:{0}".format(
                                                     str(volume_data1_pc)) + '\n'
@@ -537,7 +537,7 @@ class Sqlite:
                         #### DISK  ####
                         if disk_enable and metric.startswith('disk_usage'):
                             disk_pc = int(metrics[host][metric])
-                            if disk_pc >= disk_warning:
+                            if disk_pc >= disk_warning and disk_pc < disk_critical:
                                 avaibility.append(50)
                                 error = "Warning! Disk {0} utilization:{1}".format(
                                     metric.replace('disk_usage_',''), str(disk_pc)) + '\n'
