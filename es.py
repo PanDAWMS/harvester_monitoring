@@ -4,12 +4,12 @@ from elasticsearch_dsl import Search, Q, A
 from datetime import datetime, timedelta
 from logger import ServiceLogger
 
-_logger = ServiceLogger("configuration").logger
+_logger = ServiceLogger("es").logger
 
 class Es:
 
     def __init__(self, path):
-        self.connection = self.__make_connection(path= path)
+        self.connection = self.__make_connection(path=path)
 
     # private method
     def __make_connection(self, path, use_ssl=True, verify_certs=False, timeout=30, max_retries=10,
@@ -128,3 +128,124 @@ class Es:
             if key in submissionhostDict:
                 submissionhostDict[key]['last_submittime'] = datetime.strptime(hit.max_submittime.value_as_string, '%Y-%m-%dT%H:%M:%S.000Z')
         return submissionhostDict
+
+    def get_ratio(self, tdelta=60):
+
+        connection = self.connection
+
+        date_UTC = datetime.utcnow()
+        date_str = date_UTC - timedelta(minutes=tdelta)
+
+        s = Search(using=connection, index='atlas_harvesterworkers-*')
+        s = s.filter('range', **{'endtime': {'gte': date_str.strftime("%Y-%m-%dT%H:%M")[:-1] + '0:00',
+                                          'lt': datetime.utcnow().strftime("%Y-%m-%dT%H:%M")[:-1] + '0:00'}})
+
+        s.aggs.bucket('computingsite', 'terms', field='computingsite.keyword', size=50000)
+        s.aggs['computingsite'].bucket('workerstats', 'filters',
+                                       filters={
+                                           'good': Q('terms', status=['finished']),
+                                           'bad': Q('terms', status=['cancelled', 'failed', 'missed'])
+                                       }
+                                       )
+        s.aggs['computingsite']['workerstats'].bucket('errors', 'terms', field='diagmessage.keyword', size=50000)
+
+        s.aggs.bucket('computingelement', 'terms', field='computingelement.keyword', size=50000)
+        s.aggs['computingelement'].bucket('workerstats', 'filters',
+                                          filters={
+                                              'good': Q('terms', status=['finished']),
+                                              'bad': Q('terms', status=['cancelled', 'failed', 'missed'])
+                                          }
+                                          )
+        s.aggs['computingelement']['workerstats'].bucket('errors', 'terms', field='diagmessage.keyword', size=50000)
+
+        s = s.execute()
+        return s
+
+    def get_info_workers(self, tdelta=60):
+
+        connection = self.connection
+
+        date_UTC = datetime.utcnow()
+        date_str = date_UTC - timedelta(minutes=tdelta)
+        genes_filter = Q('bool', must=[Q('terms', status=['failed','finished','canceled','missed'])])
+        s = Search(using=connection, index='atlas_harvesterworkers-*')
+        s = s.filter('range', **{'endtime': {'gte': date_str.strftime("%Y-%m-%dT%H:%M")[:-1] + '0:00',
+                                          'lt': datetime.utcnow().strftime("%Y-%m-%dT%H:%M")[:-1] + '0:00'}})
+
+        response = s.scan()
+
+        harvester_q = {}
+        harvester_ce = {}
+        harvester_schedd_ce = {}
+
+        for hit in response:
+            submissionhost = hit.submissionhost.split(',')[0]
+
+            if hit.computingsite not in harvester_q:
+                harvester_q[hit.computingsite] = {'totalworkers':0,'badworkers':0,'goodworkers':0}
+
+            if hit.computingsite not in harvester_ce:
+                harvester_ce[hit.computingsite] = {}
+                if hit.computingelement not in harvester_ce[hit.computingsite]:
+                    harvester_ce[hit.computingsite][hit.computingelement] = {'totalworkers':0,'badworkers':0,'goodworkers':0}
+            else:
+                if hit.computingelement not in harvester_ce[hit.computingsite]:
+                    harvester_ce[hit.computingsite][hit.computingelement] = {'totalworkers':0,'badworkers':0,'goodworkers':0}
+
+            if submissionhost not in harvester_schedd_ce:
+                harvester_schedd_ce[submissionhost] = {}
+                if hit.computingelement not in harvester_schedd_ce[submissionhost]:
+                    harvester_schedd_ce[submissionhost][hit.computingelement] = {'totalworkers':0,'badworkers':0,'goodworkers':0}
+            else:
+                if hit.computingelement not in harvester_schedd_ce[submissionhost]:
+                    harvester_schedd_ce[submissionhost][hit.computingelement] = {'totalworkers': 0, 'badworkers': 0,
+                                                                                 'goodworkers': 0}
+
+
+            if hit.status in ('failed','missed','cancelled'):
+
+                harvester_q[hit.computingsite]['badworkers'] += 1
+                harvester_q[hit.computingsite]['totalworkers'] += 1
+
+                harvester_ce[hit.computingsite][hit.computingelement]['totalworkers'] += 1
+                harvester_ce[hit.computingsite][hit.computingelement]['badworkers'] += 1
+
+                harvester_schedd_ce[submissionhost][hit.computingelement]['totalworkers'] += 1
+                harvester_schedd_ce[submissionhost][hit.computingelement]['badworkers'] += 1
+
+                if 'errors' not in harvester_q[hit.computingsite]:
+                    harvester_q[hit.computingsite]['errors'] = {}
+
+                if 'errors' not in harvester_ce[hit.computingsite][hit.computingelement]:
+                    harvester_ce[hit.computingsite][hit.computingelement]['errors'] = {}
+
+                if 'errors' not in harvester_schedd_ce[submissionhost][hit.computingelement]:
+                    harvester_schedd_ce[submissionhost][hit.computingelement]['errors'] = {}
+
+                if hit.diagmessage not in harvester_q[hit.computingsite]['errors']:
+                    harvester_q[hit.computingsite]['errors'][hit.diagmessage] = 1
+                else:
+                    harvester_q[hit.computingsite]['errors'][hit.diagmessage] += 1
+
+                if hit.diagmessage not in harvester_ce[hit.computingsite][hit.computingelement]['errors']:
+                    harvester_ce[hit.computingsite][hit.computingelement]['errors'][hit.diagmessage] = 1
+                else:
+                    harvester_ce[hit.computingsite][hit.computingelement]['errors'][hit.diagmessage] += 1
+
+                if hit.diagmessage not in harvester_schedd_ce[submissionhost][hit.computingelement]['errors']:
+                    harvester_schedd_ce[submissionhost][hit.computingelement]['errors'][hit.diagmessage] = 1
+                else:
+                    harvester_schedd_ce[submissionhost][hit.computingelement]['errors'][hit.diagmessage] += 1
+
+            if hit.status in ('finished'):
+                harvester_q[hit.computingsite]['totalworkers'] += 1
+                harvester_q[hit.computingsite]['goodworkers'] += 1
+
+                harvester_ce[hit.computingsite][hit.computingelement]['totalworkers'] += 1
+                harvester_ce[hit.computingsite][hit.computingelement]['goodworkers'] += 1
+
+                harvester_schedd_ce[submissionhost][hit.computingelement]['totalworkers'] += 1
+                harvester_schedd_ce[submissionhost][hit.computingelement]['goodworkers'] += 1
+
+
+        return harvester_q, harvester_ce, harvester_schedd_ce
