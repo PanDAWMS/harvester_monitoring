@@ -289,7 +289,7 @@ class Sqlite:
                                         error = "Warning! CPU utilization:{0}".format(
                                             str(cpu_pc)) + '\n'
                                         error_text.add(error)
-                                        self.__insert_history_availability(harvesterid = harvesterid, harvesterhost=host,
+                                        self.__insert_history_availability(harvesterid=harvesterid, harvesterhost=host,
                                                     typeoferror='warning', textoferror='cpu' ,
                                                                            availability=50, notificated=0, fulltext=error)
                                     elif cpu_pc >= cpu_critical:
@@ -297,7 +297,7 @@ class Sqlite:
                                         error = "CPU utilization:{0}".format(
                                             str(cpu_pc)) + '\n'
                                         error_text.add(error)
-                                        self.__insert_history_availability(harvesterid = harvesterid, harvesterhost = host,
+                                        self.__insert_history_availability(harvesterid=harvesterid, harvesterhost=host,
                                                                          typeoferror='critical', textoferror='cpu',
                                                                            availability=10, notificated=0, fulltext=error)
                                 #### Memory ####
@@ -311,7 +311,7 @@ class Sqlite:
                                         error = "Warning! Memory consumption:{0}".format(
                                             str(memory_pc)) + '\n'
                                         error_text.add(error)
-                                        self.__insert_history_availability(harvesterid = harvesterid, harvesterhost = host,
+                                        self.__insert_history_availability(harvesterid=harvesterid, harvesterhost=host,
                                                                          typeoferror='warning', textoferror= 'memory',
                                                                            availability=50, notificated=0, fulltext=error)
                                     elif memory_pc >= memory_critical:
@@ -319,7 +319,7 @@ class Sqlite:
                                         error = "Memory consumption:{0}".format(
                                             str(memory_pc)) + '\n'
                                         error_text.add(error)
-                                        self.__insert_history_availability(harvesterid = harvesterid, harvesterhost = host,
+                                        self.__insert_history_availability(harvesterid=harvesterid, harvesterhost=host,
                                                                          typeoferror='critical', textoferror= 'memory',
                                                                            availability=10, notificated=0, fulltext=error)
                                 #### HDD&HDD1  ####
@@ -333,7 +333,7 @@ class Sqlite:
                                         error = "Warning! Disk utilization:{0}".format(
                                                 str(volume_data_pc)) + '\n'
                                         error_text.add(error)
-                                        self.__insert_history_availability(harvesterid = harvesterid, harvesterhost = host,
+                                        self.__insert_history_availability(harvesterid=harvesterid, harvesterhost=host,
                                                                          typeoferror='warning', textoferror= 'disk',
                                                                            availability=50, notificated=0, fulltext=error)
                                     elif volume_data_pc >= disk_critical:
@@ -341,7 +341,7 @@ class Sqlite:
                                         error = "Disk utilization:{0}".format(
                                                 str(volume_data_pc)) + '\n'
                                         error_text.add(error)
-                                        self.__insert_history_availability(harvesterid = harvesterid, harvesterhost = host,
+                                        self.__insert_history_availability(harvesterid=harvesterid, harvesterhost=host,
                                                                          typeoferror='critical', textoferror='disk',
                                                                            availability=10, notificated=0, fulltext=error)
                                     if 'volume_data1_pc' in metric:

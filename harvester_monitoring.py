@@ -28,7 +28,11 @@ def main():
     instances = sqlite.get_data()
 
     for instance in instances:
+        if instance not in config.XMLconfiguration.keys():
+            continue
         for harvesterhost in instances[instance]:
+            if harvesterhost not in config.XMLconfiguration[instance].keys():
+                continue
             if harvesterhost != 'none':
                 availability = instances[instance][harvesterhost]['availability']
                 notificated = instances[instance][harvesterhost]['notificated']
@@ -45,11 +49,11 @@ def main():
                                 sqlite.update_entry('HISTORYLOG', 'notificated', 1, instance, harvesterhost, checkmetrictime=error['checkmetrictime'])
                                 sqlite.update_entry('HISTORYLOG', 'notificationtime', str(datetime.utcnow()), instance, harvesterhost,
                                                     checkmetrictime=error['checkmetrictime'])
-                        if mailtext !='':
+                        if mailtext != '':
                             email = Notifications(text=mailtext,
                                             subject='Service issues on {0} {1}'.format(instance, harvesterhost),
                                             to=contacts)
-                            #email.send_notification_email()
+                            email.send_notification_email()
                             sqlite.update_entry('INSTANCES', 'notificated', 1, instance, harvesterhost)
                             email = {}
                 elif availability == 100 and notificated == 1:
@@ -57,7 +61,7 @@ def main():
                 host = harvesterhost.split('.')[0]
                 doc = ServiceDocument('harv_{0}_{1}'.format(instance, host), availability=availability, contact=','.join(contacts), availabilitydesc="PandaHarvester instance:{0}".format(instance), availabilityinfo="{0}".format(text))
                 try:
-                    #XSLSPublisher.send(doc)
+                    XSLSPublisher.send(doc)
                     _logger.debug(str(doc.__dict__))
                 except Exception as ex:
                     _logger.error(ex.message)
