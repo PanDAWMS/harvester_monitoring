@@ -2,6 +2,7 @@ import re
 import os
 
 class Errors:
+
     def __init__(self, filename):
         self.patterns = self.__read_patterns(filename=filename)
 
@@ -62,6 +63,7 @@ class Errors:
             isPattern = False
             error_str = " ".join((error).split())
             for pattern_key in self.patterns:
+                old_pattern = pattern_key
                 if pattern_key.find('\\') != -1:
                     pattern_key = pattern_key.replace('\\', '\\\\')
                 if pattern_key.find('/') != -1:
@@ -74,12 +76,14 @@ class Errors:
                     pattern_key = pattern_key.replace('(', '\(')
                 if pattern_key.find(')') != -1:
                     pattern_key = pattern_key.replace(')', '\)')
-                if pattern_key.find('\\(.*?\\)') != -1:
-                    pattern_key = pattern_key.replace('\\(.*?\\)', '(.*?)')
+                if pattern_key.find('\(.*?\)') != -1:
+                    pattern_key = pattern_key.replace('\(.*?\)', '(.*?)')
+                if pattern_key.find('\(.*\)') != -1:
+                    pattern_key = pattern_key.replace('\(.*\)', '(.*)')
                 pn = re.compile(pattern_key)
                 if pn.match(r"""{0}""".format(error_str)):
                     isPattern = True
-                    pattern = pn.pattern
+                    pattern = old_pattern
                     break
             if isPattern:
                 if pattern not in errors_dict[pq]:

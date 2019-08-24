@@ -8,7 +8,7 @@ from influxdb import InfluxDBClient
 from es import Es
 
 from logger import ServiceLogger
-from error_accounting import Errors
+from accounting.error_accounting import Errors
 
 _logger = ServiceLogger("influxdb").logger
 
@@ -222,13 +222,12 @@ class Influx:
 
         es = Es(self.path)
 
-        harvester_queues, harvester_computingelements, harvester_schedd = es.get_info_workers(tdelta)
+        harvester_queues, harvester_computingelements = es.get_info_workers(tdelta, type="ce_pq")
 
         errors_object = Errors('patterns.txt')
 
         harvester_queues_errors = {}
         harvester_computingelements_errors = {}
-        harvester_schedd_errors = {}
 
         for queuename in harvester_queues:
             if 'errors' in harvester_queues[queuename]:
@@ -239,13 +238,6 @@ class Influx:
                 if 'errors' in harvester_computingelements[queuename][ce]:
                     harvester_computingelements_errors[queuename] = errors_object.errors_accounting_tmp(ce, harvester_computingelements[queuename][ce]['errors'],
                                                                                                         harvester_computingelements_errors[queuename], harvester_computingelements[queuename][ce]['badworkers'])
-        for schedd in harvester_schedd:
-            harvester_schedd_errors[schedd]={}
-            for ce in harvester_schedd[schedd]:
-                if 'errors' in harvester_schedd[schedd][ce]:
-                    harvester_schedd_errors[schedd] = errors_object.errors_accounting_tmp(ce, harvester_schedd[schedd][ce]['errors'],
-                                                                                 harvester_schedd_errors[schedd], harvester_schedd[schedd][ce]['badworkers'])
-
 
         q_keys = harvester_queues.keys()
         q_errors_keys = harvester_queues_errors.keys()
@@ -255,9 +247,6 @@ class Influx:
 
         harvester_ce_json_influxdb = []
         harvester_ce_errors_json_influxdb = []
-
-        harvester_schedd_json_influxdb = []
-        harvester_schedd_errors_json_influxdb = []
 
         date_string = date_key.strftime("%Y-%m-%d %H:%M")[:-1]+'0:00'
         datetime_object = datetime.strptime(date_string,'%Y-%m-%d %H:%M:%S')
@@ -390,47 +379,46 @@ class Influx:
                                 }
                             }
                         )
-        for schedd in harvester_schedd:
-            for ce in harvester_schedd[schedd]:
-                harvester_schedd_json_influxdb.append(
-                    {
-                        "measurement": "submissionhosts",
-                        "tags": {
-                            "submissionhost": schedd,
-                            "computingelement": ce
-                        },
-                        "time": int(time_stamp),
-                        "fields": {
-                            "totalworkers": harvester_schedd[schedd][ce]['totalworkers'],
-                            "goodworkers": harvester_schedd[schedd][ce]['goodworkers'],
-                            "badworkers": harvester_schedd[schedd][ce]['badworkers'],
-                        }
-                    }
-                )
-                if schedd in harvester_schedd_errors and ce in harvester_schedd_errors[schedd]:
-                    for error in harvester_schedd_errors[schedd][ce]:
-                        harvester_schedd_errors_json_influxdb.append(
-                            {
-                                "measurement": "submissionhost_errors",
-                                "tags": {
-                                    "submissionhost": schedd,
-                                    "computingelement": ce,
-                                    "errordesc": error,
-                                },
-                                "time": int(time_stamp),
-                                "fields": {
-                                    "totalworkers": harvester_schedd[schedd][ce]['totalworkers'],
-                                    "goodworkers": harvester_schedd[schedd][ce]['goodworkers'],
-                                    "badworkers": harvester_schedd[schedd][ce]['badworkers'],
-                                    # "ratio": float(harvester_computingelements[ce]['ratio']),
-                                    "error_count": harvester_schedd_errors[schedd][ce][error]['error_count'],
-                                    "total_error_count": harvester_schedd_errors[schedd][ce][error][
-                                        'total_error_count'],
-                                }
-                            }
-                        )
-
-
+        #
+        # for schedd in harvester_schedd:
+        #     for ce in harvester_schedd[schedd]:
+        #         harvester_schedd_json_influxdb.append(
+        #             {
+        #                 "measurement": "submissionhosts",
+        #                 "tags": {
+        #                     "submissionhost": schedd,
+        #                     "computingelement": ce
+        #                 },
+        #                 "time": int(time_stamp),
+        #                 "fields": {
+        #                     "totalworkers": harvester_schedd[schedd][ce]['totalworkers'],
+        #                     "goodworkers": harvester_schedd[schedd][ce]['goodworkers'],
+        #                     "badworkers": harvester_schedd[schedd][ce]['badworkers'],
+        #                 }
+        #             }
+        #         )
+        #         if schedd in harvester_schedd_errors and ce in harvester_schedd_errors[schedd]:
+        #             for error in harvester_schedd_errors[schedd][ce]:
+        #                 harvester_schedd_errors_json_influxdb.append(
+        #                     {
+        #                         "measurement": "submissionhost_errors",
+        #                         "tags": {
+        #                             "submissionhost": schedd,
+        #                             "computingelement": ce,
+        #                             "errordesc": error,
+        #                         },
+        #                         "time": int(time_stamp),
+        #                         "fields": {
+        #                             "totalworkers": harvester_schedd[schedd][ce]['totalworkers'],
+        #                             "goodworkers": harvester_schedd[schedd][ce]['goodworkers'],
+        #                             "badworkers": harvester_schedd[schedd][ce]['badworkers'],
+        #                             # "ratio": float(harvester_computingelements[ce]['ratio']),
+        #                             "error_count": harvester_schedd_errors[schedd][ce][error]['error_count'],
+        #                             "total_error_count": harvester_schedd_errors[schedd][ce][error][
+        #                                 'total_error_count'],
+        #                         }
+        #                     }
+        #                 )
 
         try:
            self.connection.write_points(harvester_queues_json_influxdb, time_precision='s', retention_policy="main")
@@ -446,13 +434,5 @@ class Influx:
             _logger.error(ex)
         try:
            self.connection.write_points(harvester_ce_errors_json_influxdb, time_precision='s', retention_policy="main")
-        except Exception as ex:
-            _logger.error(ex)
-        try:
-           self.connection.write_points(harvester_schedd_json_influxdb, time_precision='s', retention_policy="main")
-        except Exception as ex:
-            _logger.error(ex)
-        try:
-           self.connection.write_points(harvester_schedd_errors_json_influxdb, time_precision='s', retention_policy="main")
         except Exception as ex:
             _logger.error(ex)

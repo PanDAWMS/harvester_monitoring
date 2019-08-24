@@ -5,7 +5,7 @@ from configparser import ConfigParser
 from datetime import datetime
 from es import Es
 
-from error_accounting import Errors
+from accounting.error_accounting import Errors
 from logger import ServiceLogger
 
 _logger = ServiceLogger("mysql").logger
