@@ -222,7 +222,7 @@ class Influx:
 
         es = Es(self.path)
 
-        harvester_queues, harvester_computingelements = es.get_info_workers(tdelta, type="ce_pq")
+        harvester_queues, harvester_computingelements = es.get_info_workers(tdelta=tdelta, type="ce_pq", time='endtime')
 
         errors_object = Errors('patterns.txt')
 

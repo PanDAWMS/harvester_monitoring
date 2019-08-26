@@ -47,7 +47,7 @@ class Influx:
 
         es = Es(self.path)
 
-        tmp_harvester_schedd = es.get_info_workers(tdelta=tdelta, type="gahp")
+        tmp_harvester_schedd = es.get_info_workers(tdelta=tdelta, type="gahp", time='submittime')
         harvester_schedd = tmp_harvester_schedd.copy()
         errors_object = Errors('patterns.txt')
 
@@ -93,8 +93,8 @@ class Influx:
 
         time_stamp = time.mktime(datetime_object.timetuple())
 
-        for schedd in harvester_schedd:
-            for ce in harvester_schedd[schedd]:
+        for ce in harvester_schedd:
+            for schedd in harvester_schedd[schedd]:
                 harvester_schedd_json_influxdb.append(
                     {
                         "measurement": "submissionhosts",

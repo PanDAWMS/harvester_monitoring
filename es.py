@@ -161,7 +161,7 @@ class Es:
         s = s.execute()
         return s
 
-    def get_info_workers(self, type, tdelta=60):
+    def get_info_workers(self, type, tdelta=60, time='submittime'):
 
         connection = self.connection
 
@@ -169,7 +169,7 @@ class Es:
         date_str = date_UTC - timedelta(minutes=tdelta)
         genes_filter = Q('bool', must=[Q('terms', status=['failed','finished','canceled','missed'])])
         s = Search(using=connection, index='atlas_harvesterworkers-*')
-        s = s.filter('range', **{'submittime': {'gte': date_str.strftime("%Y-%m-%dT%H:%M")[:-1] + '0:00',
+        s = s.filter('range', **{time: {'gte': date_str.strftime("%Y-%m-%dT%H:%M")[:-1] + '0:00',
                                           'lt': datetime.utcnow().strftime("%Y-%m-%dT%H:%M")[:-1] + '0:00'}})
 
         response = s.scan()
