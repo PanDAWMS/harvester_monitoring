@@ -36,7 +36,8 @@ class Influx:
             _logger.error(ex.message)
             print ex.message
         try:
-            connection = InfluxDBClient(host, int(port), user, password, dbname)
+            connection = InfluxDBClient(host, int(port), user, password, dbname, ssl=True,
+                                        verify_ssl=False)
             return connection
         except Exception as ex:
             _logger.error(ex.message)
