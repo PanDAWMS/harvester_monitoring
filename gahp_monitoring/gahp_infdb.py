@@ -1,52 +1,25 @@
-import requests
 import time
 import copy
+
 from datetime import datetime
-from configparser import ConfigParser
-from influxdb import InfluxDBClient
 
-from es import Es
-
-from logger import ServiceLogger
+from baseclasses.infdbbaseclass import InfluxDbBaseClass
 from accounting.error_accounting import Errors
 
-_logger = ServiceLogger("influxdb").logger
+from . gahp_es import GahpMonitoringEs
+from logger import ServiceLogger
 
-class Influx:
+_logger = ServiceLogger("influxdb_gahp",__file__).logger
+
+
+class InfluxDbGahp(InfluxDbBaseClass):
 
     def __init__(self, path):
-        self.connection = self.__make_connection(path=path)
-        self.path = path
-
-    # private method
-    def __make_connection(self, path):
-        """
-        Create a connection to InfluxDB
-        """
-        try:
-            cfg = ConfigParser()
-            cfg.read(path)
-            user = cfg.get('influxdb', 'login')
-            password = cfg.get('influxdb', 'password')
-            dbname = cfg.get('influxdb', 'dbname')
-            host = cfg.get('influxdb', 'host')
-            port = cfg.get('influxdb', 'port')
-
-        except Exception as ex:
-            _logger.error(ex.message)
-            print ex.message
-        try:
-            connection = InfluxDBClient(host, int(port), user, password, dbname, ssl=True,
-                                        verify_ssl=False)
-            return connection
-        except Exception as ex:
-            _logger.error(ex.message)
-            print ex.message
-        return None
+        super().__init__(path)
 
     def write_data_tmp(self, tdelta):
 
-        es = Es(self.path)
+        es = GahpMonitoringEs(self.path)
 
         tmp_harvester_schedd = es.get_info_workers(tdelta=tdelta, type="gahp", time='submittime')
         harvester_schedd = copy.deepcopy(tmp_harvester_schedd)
@@ -55,11 +28,14 @@ class Influx:
         harvester_schedd_errors = {}
 
         for schedd in tmp_harvester_schedd:
-            harvester_schedd_errors[schedd]={}
+            harvester_schedd_errors[schedd] = {}
             for ce in tmp_harvester_schedd[schedd]:
                 if 'errors' in tmp_harvester_schedd[schedd][ce]:
-                    harvester_schedd_errors[schedd] = errors_object.errors_accounting_tmp(ce, harvester_schedd[schedd][ce]['errors'],
-                                                                                 harvester_schedd_errors[schedd], harvester_schedd[schedd][ce]['badworkers'])
+                    harvester_schedd_errors[schedd] = errors_object.errors_accounting_tmp(ce,
+                                                                                          harvester_schedd[schedd][ce]
+                                                                                          ['errors'],
+                                                                                          harvester_schedd_errors[schedd],
+                                                                                          harvester_schedd[schedd][ce]['badworkers'])
         harvester_schedd_json_influxdb = []
         harvester_schedd_errors_json_influxdb = []
 
@@ -74,7 +50,9 @@ class Influx:
                         del harvester_schedd[ce][schedd]
                         continue
                     try:
-                        error_rate = (float(tmp_harvester_schedd[ce][schedd]['badworkers'])/(float(tmp_harvester_schedd[ce][schedd]['goodworkers']) + float(tmp_harvester_schedd[ce][schedd]['badworkers'])))*100
+                        error_rate = (float(tmp_harvester_schedd[ce][schedd]['badworkers']) / (
+                                    float(tmp_harvester_schedd[ce][schedd]['goodworkers']) + float(
+                                tmp_harvester_schedd[ce][schedd]['badworkers']))) * 100
                         error_list.append(int(error_rate))
                     except:
                         pass
@@ -86,7 +64,9 @@ class Influx:
                     del harvester_schedd[ce]
             else:
                 try:
-                    error_rate = (float(tmp_harvester_schedd[ce][schedd]['badworkers']) / (float(tmp_harvester_schedd[ce][schedd]['goodworkers']) + float(tmp_harvester_schedd[ce][schedd]['badworkers']))) * 100
+                    error_rate = (float(tmp_harvester_schedd[ce][schedd]['badworkers']) / (
+                                float(tmp_harvester_schedd[ce][schedd]['goodworkers']) + float(
+                            tmp_harvester_schedd[ce][schedd]['badworkers']))) * 100
                 except:
                     error_rate = 0
                 if error_rate == 100:
@@ -95,8 +75,8 @@ class Influx:
                     del harvester_schedd[ce]
 
         date_key = datetime.now()
-        date_string = date_key.strftime("%Y-%m-%d %H:%M")[:-1]+'0:00'
-        datetime_object = datetime.strptime(date_string,'%Y-%m-%d %H:%M:%S')
+        date_string = date_key.strftime("%Y-%m-%d %H:%M")[:-1] + '0:00'
+        datetime_object = datetime.strptime(date_string, '%Y-%m-%d %H:%M:%S')
 
         time_stamp = time.mktime(datetime_object.timetuple())
 
@@ -143,10 +123,11 @@ class Influx:
                         )
 
         try:
-           self.connection.write_points(harvester_schedd_json_influxdb, time_precision='s', retention_policy="main")
+            self.connection.write_points(harvester_schedd_json_influxdb, time_precision='s', retention_policy="main")
         except Exception as ex:
             _logger.error(ex)
         try:
-           self.connection.write_points(harvester_schedd_errors_json_influxdb, time_precision='s', retention_policy="main")
+            self.connection.write_points(harvester_schedd_errors_json_influxdb, time_precision='s',
+                                         retention_policy="main")
         except Exception as ex:
             _logger.error(ex)

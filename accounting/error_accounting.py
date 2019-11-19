@@ -1,6 +1,7 @@
 import re
 import os
 
+
 class Errors:
 
     def __init__(self, filename):
@@ -12,7 +13,7 @@ class Errors:
         Read patterns from file
         """
         path = os.path.dirname(os.path.abspath(__file__))
-        filename = path+'/'+filename
+        filename = path + '/' + filename
         try:
             with open(filename, "r") as ins:
                 patterns = []
@@ -31,7 +32,7 @@ class Errors:
                 if pattern_key.find('\\') != -1:
                     pattern_key = pattern_key.replace('\\', '\\\\')
                 if pattern_key.find('/') != -1:
-                    pattern_key = pattern_key.replace('/','\/')
+                    pattern_key = pattern_key.replace('/', '\/')
                 if pattern_key.find('[') != -1:
                     pattern_key = pattern_key.replace('[', '\[')
                 if pattern_key.find(']') != -1:
@@ -49,12 +50,15 @@ class Errors:
                     break
             if isPattern:
                 if pattern not in errors_dict[errors.key]:
-                    errors_dict[errors.key][pattern] = {"error_count":error.doc_count, "total_error_count":errors.workerstats.buckets['bad'].doc_count}
+                    errors_dict[errors.key][pattern] = {"error_count": error.doc_count,
+                                                        "total_error_count": errors.workerstats.buckets[
+                                                            'bad'].doc_count}
                 else:
                     errors_dict[errors.key][pattern]["error_count"] = errors_dict[errors.key][
-                                                           pattern]["error_count"] + error.doc_count
+                                                                          pattern]["error_count"] + error.doc_count
             else:
-                errors_dict[errors.key][error_str] = {"error_count":error.doc_count, "total_error_count":errors.workerstats.buckets['bad'].doc_count}
+                errors_dict[errors.key][error_str] = {"error_count": error.doc_count,
+                                                      "total_error_count": errors.workerstats.buckets['bad'].doc_count}
         return errors_dict
 
     def errors_accounting_tmp(self, pq, errors, errors_dict, total_errors):
@@ -67,7 +71,7 @@ class Errors:
                 if pattern_key.find('\\') != -1:
                     pattern_key = pattern_key.replace('\\', '\\\\')
                 if pattern_key.find('/') != -1:
-                    pattern_key = pattern_key.replace('/','\/')
+                    pattern_key = pattern_key.replace('/', '\/')
                 if pattern_key.find('[') != -1:
                     pattern_key = pattern_key.replace('[', '\[')
                 if pattern_key.find(']') != -1:
@@ -90,7 +94,7 @@ class Errors:
                     errors_dict[pq][pattern] = {"error_count": errors[error], "total_error_count": total_errors}
                 else:
                     errors_dict[pq][pattern]["error_count"] = errors_dict[pq][
-                                                           pattern]["error_count"] + errors[error]
+                                                                  pattern]["error_count"] + errors[error]
             else:
                 errors_dict[pq][error_str] = {"error_count": errors[error], "total_error_count": total_errors}
         return errors_dict

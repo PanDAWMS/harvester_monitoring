@@ -1,12 +1,13 @@
 import smtplib
 from logger import ServiceLogger
 
-_logger = ServiceLogger("notifications").logger
+_logger = ServiceLogger("notifications", __file__).logger
+
 
 class Notifications:
 
-    def __init__(self, to, mailserver = "localhost", fromemail="atlpan@mail.cern.ch",
-                                text='', subject=''):
+    def __init__(self, to, mailserver="localhost", fromemail="atlpan@mail.cern.ch",
+                 text='', subject=''):
         self.to = to
         self.mailserver = mailserver
         self.fromemail = fromemail

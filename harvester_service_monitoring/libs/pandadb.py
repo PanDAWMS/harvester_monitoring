@@ -3,7 +3,8 @@ import cx_Oracle, json
 from configparser import ConfigParser
 from logger import ServiceLogger
 
-_logger = ServiceLogger("pandadb").logger
+_logger = ServiceLogger("pandadb", __file__).logger
+
 
 class PandaDB:
 
@@ -27,7 +28,7 @@ class PandaDB:
             connection = cx_Oracle.connect(dbuser, dbpasswd, description)
             return connection
         except Exception as ex:
-            _logger.error(ex.message)
+            _logger.error(ex)
         return None
 
     def get_db_metrics(self):
@@ -50,13 +51,14 @@ class PandaDB:
                     metrcis[result['harvester_id']] = {}
                 if result['harvester_host'] not in metrcis[result['harvester_id']]:
                     metrcis[result['harvester_id']][result['harvester_host']] = {}
-                metrcis[result['harvester_id']][result['harvester_host']].setdefault(result['creation_time'], []).append(
+                metrcis[result['harvester_id']][result['harvester_host']].setdefault(result['creation_time'],
+                                                                                     []).append(
                     json.loads(result['metrics']))
             _logger.debug("Metrics: {0}".format(str(metrcis)))
             return metrcis
         except Exception as ex:
-            _logger.error(ex.message)
-            print ex
+            _logger.error(ex)
+            print(ex)
 
     # private method
     def __read_query(self, query, connection):

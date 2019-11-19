@@ -11,7 +11,7 @@ The Harvester service monitoring runs as a cronjob and checks prefedined Harvest
 - Last heartbeat
 
 ## Basic operations
-- Node: aipanda179
+- Node: aipanda008
 - Important folders:
   - [x] Work directory: */data/harvester_service_monitoring*
   - [x] Configuration: */data/harvester_service_monitoring/configuration* . Contains one XML file per harvester instance
@@ -19,9 +19,50 @@ The Harvester service monitoring runs as a cronjob and checks prefedined Harvest
   - [x] Logging: */data/harvester_service_monitoring/logs*
   - [x] Cronjob: 
 ```
-[root@aipanda179 tmp]# cat /etc/crontab
+[root@aipanda008 tmp]# cat /etc/crontab
 ...
 */10 * * * * root /usr/bin/python /data/harvester_service_monitoring/harvester_monitoring.py > /dev/null 2>&1
 ```
 ### Configuration
-**Add some examples for configuration. How to disable a particular metric?**
+XML-template of configuration for Harvester service monitoring:
+```
+<?xml version="1.0"?>
+<instances>
+    <instance harvesterid="CERN_central_X" instanceisenable="True">
+        <hostlist>
+            <host hostname="aipandaXXX.cern.ch" hostisenable="True">
+                <contacts>
+                    <email>forcontact@mail.com</email>
+                    <email>forcontact@mail.com</email>
+                </contacts>
+                <memory>6000</memory>
+                <metrics warning_delay="6h" critical_delay="6h">
+                    <metric name="lastsubmittedworker" enable="True">
+                        <value>60d</value>
+                    </metric>
+                    <metric name="lastheartbeat" enable="True">
+                        <value>30</value>
+                    </metric>
+                    <metric name="memory" enable="True">
+                        <memory_warning>50</memory_warning>
+                        <memory_critical>80</memory_critical>
+                    </metric>
+                    <metric name="cpu" enable="True">
+                        <cpu_warning>50</cpu_warning>
+                        <cpu_critical>80</cpu_critical>
+                    </metric>
+                    <metric name="disk" enable="True">
+                        <disk_warning>70</disk_warning>
+                        <disk_critical>80</disk_critical>
+                    </metric>
+                </metrics>
+            </host>
+        </hostlist>
+    </instance>
+</instances>
+```
+For disabling instances, hosts and metrics use the following properties:
+- For instance tags. instanceisenable="False"
+- For host tags. hostisenable="False"
+- For metric tags. enable="False"
+
