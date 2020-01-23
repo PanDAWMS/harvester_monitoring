@@ -205,7 +205,7 @@ class PandaQEs(EsBaseClass):
     def get_suspicious_ces(self):
 
         time_list = ['now-1h', 'now-2h', 'now-3h', 'now-4h', 'now-5h',
-                     'now-6h', 'now-12h', 'now-1d', 'now-7d', 'now-30d']
+                     'now-6h', 'now-12h', 'now-1d', 'now-2d', 'now-3d', 'now-7d', 'now-30d']
 
         ces_candidats_avg = {}
         ces_candidats_count = {}
@@ -258,6 +258,44 @@ class PandaQEs(EsBaseClass):
                     ces_candidats_count[ce][gte] = n_workers_count[ce]
         df_avg = pd.DataFrame.from_dict(ces_candidats_avg, orient='index')
         df_count = pd.DataFrame.from_dict(ces_candidats_count, orient='index')
+
+        lim = 40
+        ces_candidats = set()
+
+
+        for ce in ces_candidats_avg:
+            first_not_zero = 0
+
+            if ce != 'none':
+                if 'now-6h' in ces_candidats_avg[ce] and ces_candidats_avg[ce]['now-6h'] != 0 and first_not_zero == 0:
+                    first_not_zero = ces_candidats_avg[ce]['now-6h']
+                else:
+                    ces_candidats.add(ce)
+                    continue
+                if ces_candidats_avg[ce]['now-12h'] != 0 and first_not_zero == 0:
+                    first_not_zero = ces_candidats_avg[ce]['now-12h']
+                if ces_candidats_avg[ce]['now-1d'] != 0 and first_not_zero == 0:
+                    first_not_zero = ces_candidats_avg[ce]['now-1d']
+                if ces_candidats_avg[ce]['now-1d'] != 0 and first_not_zero == 0:
+                    first_not_zero = ces_candidats_avg[ce]['now-1d']
+                if ces_candidats_avg[ce]['now-2d'] != 0 and first_not_zero == 0:
+                    first_not_zero = ces_candidats_avg[ce]['now-2d']
+                if ces_candidats_avg[ce]['now-3d'] != 0 and first_not_zero == 0:
+                    first_not_zero = ces_candidats_avg[ce]['now-3d']
+                if ces_candidats_avg[ce]['now-7d'] != 0 and first_not_zero == 0:
+                    first_not_zero = ces_candidats_avg[ce]['now-7d']
+                for time in ces_candidats_avg[ce]:
+                    try:
+                        if time not in ['now-1h', 'now-2h']:
+                            if int((ces_candidats_avg[ce][time]/first_not_zero)*100) < lim:
+                                ces_candidats.add(ce)
+                                break
+                    except:
+                        ces_candidats.add(ce)
+        for ce in list(ces_candidats_avg):
+            if ce not in ces_candidats:
+                del ces_candidats_avg[ce]
+                del ces_candidats_count[ce]
         return ces_candidats_avg, ces_candidats_count
 
     def get_suspicious_pq(self):
