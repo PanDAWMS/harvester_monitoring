@@ -286,7 +286,7 @@ class PandaQEs(EsBaseClass):
                     first_not_zero = ces_candidats_avg[ce]['now-7d']
                 for time in ces_candidats_avg[ce]:
                     try:
-                        if time not in ['now-1h', 'now-2h']:
+                        if time not in ['now-1h', 'now-2h', 'now-3h']:
                             if int((ces_candidats_avg[ce][time]/first_not_zero)*100) < lim:
                                 ces_candidats.add(ce)
                                 break

@@ -18,7 +18,7 @@ class Es(EsBaseClass):
         connection = self.connection
 
         s = Search(using=connection, index='atlas_harvesterworkers-*')[:0]
-
+        s = s.filter('terms', status=['missed'])
         s.aggs.bucket('harvesterid', 'terms', field='harvesterid.keyword', size=1000) \
             .metric('max_submittime', 'max', field='submittime') \
             .metric('min_submittime', 'min', field='submittime') \
