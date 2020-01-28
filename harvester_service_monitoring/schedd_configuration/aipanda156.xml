@@ -5,8 +5,7 @@
                     <email></email>
                     <email></email>
                     <email></email>
-                    <email></email>
-                </contacts>
+                    <email></email>           </contacts>
                 <metrics warning_delay="6h" critical_delay="6h">
                     <metric name="lastsubmittedworker" enable="True">
                         <value>30m</value>

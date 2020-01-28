@@ -2,10 +2,12 @@
 <instances>
     <instance harvesterid="CERN_central_0" instanceisenable="True">
         <hostlist>
-            <host hostname="aipanda175.cern.ch" hostisenable="True">
+            <host hostname="" hostisenable="True">
                 <contacts>
-                    <email>forcontact@mail.com</email>
-                    <email>forcontact@mail.com</email>
+                    <email></email>
+                    <email></email>
+                    <email></email>
+                    <email></email>
                 </contacts>
                 <memory>6000</memory>
                 <metrics warning_delay="6h" critical_delay="6h">
@@ -16,11 +18,11 @@
                         <value>30</value>
                     </metric>
                     <metric name="memory" enable="True">
-                        <memory_warning>50</memory_warning>
+                        <memory_warning>70</memory_warning>
                         <memory_critical>80</memory_critical>
                     </metric>
                     <metric name="cpu" enable="True">
-                        <cpu_warning>50</cpu_warning>
+                        <cpu_warning>70</cpu_warning>
                         <cpu_critical>80</cpu_critical>
                     </metric>
                     <metric name="disk" enable="True">

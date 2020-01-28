@@ -19,10 +19,10 @@ class EsBaseClass:
         try:
             cfg = ConfigParser()
             cfg.read(path)
-            eslogin = cfg.get('server', 'login')
-            espasswd = cfg.get('server', 'password')
-            host = cfg.get('server', 'host')
-            port = cfg.get('server', 'port')
+            eslogin = cfg.get('esserver', 'login')
+            espasswd = cfg.get('esserver', 'password')
+            host = cfg.get('esserver', 'host')
+            port = cfg.get('esserver', 'port')
         except Exception as ex:
             _logger.error(ex)
             print(ex)

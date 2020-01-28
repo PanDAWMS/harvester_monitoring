@@ -13,17 +13,20 @@ from libs.es import Es
 from libs.notifications import Notifications
 from logger import ServiceLogger
 
-
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 _logger = ServiceLogger("harvester_monitoring", __file__).logger
 
 
 def main():
+
     config = Config(BASE_DIR + '/configuration/')
     sqlite = Sqlite(BASE_DIR + '/storage/hsm.db', config.XMLconfiguration)
-    pandadb = PandaDB('../settings.ini')
-    es = Es('../settings.ini')
+
+    settings = path.abspath(path.join(path.dirname(__file__), '..', 'settings.ini'))
+
+    pandadb = PandaDB(settings)
+    es = Es(settings)
 
     metrics = pandadb.get_db_metrics()
     dictHarvesterHosts, dictHarvesterInstnaces = es.get_last_submittedtime()
@@ -59,7 +62,7 @@ def main():
                             email = Notifications(text=mailtext,
                                                   subject='Service issues on {0} {1}'.format(instance, harvesterhost),
                                                   to=contacts)
-                            #email.send_notification_email()
+                            email.send_notification_email()
                             sqlite.update_entry('INSTANCES', 'notificated', 1, instance, harvesterhost)
                             email = {}
                 elif availability == 100 and notificated == 1:

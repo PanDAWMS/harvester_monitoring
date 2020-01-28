@@ -21,7 +21,10 @@ _logger = ServiceLogger("schedd_monitoring", __file__).logger
 def main():
     config = Config(BASE_DIR + '/schedd_configuration/', type='schedd')
     sqlite = Sqlite(BASE_DIR + '/storage/hsm.db', config.XMLconfiguration)
-    es = Es('../settings.ini')
+
+    settings = path.abspath(path.join(path.dirname(__file__), '..', 'settings.ini'))
+
+    es = Es(settings)
 
     schedd_metrics = es.get_schedd_metrics()
     sqlite.scheddhosts_availability(schedd_metrics)
