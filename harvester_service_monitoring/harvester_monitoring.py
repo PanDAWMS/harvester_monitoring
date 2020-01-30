@@ -29,7 +29,8 @@ def main():
     es = Es(settings)
 
     metrics = pandadb.get_db_metrics()
-    dictHarvesterHosts, dictHarvesterInstnaces = es.get_last_submittedtime()
+
+    dictHarvesterInstnaces = es.get_workers_stats()
     sqlite.instances_availability(dictHarvesterInstnaces, metrics)
 
     instances = sqlite.get_data()
@@ -73,7 +74,7 @@ def main():
                                       availabilitydesc="PandaHarvester instance:{0}".format(instance),
                                       availabilityinfo="{0}".format(text))
                 try:
-                    XSLSPublisher.send(doc)
+                    #XSLSPublisher.send(doc)
                     _logger.debug(str(doc.__dict__))
                 except Exception as ex:
                     _logger.error(ex.message)

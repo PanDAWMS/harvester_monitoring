@@ -63,7 +63,7 @@ def main():
                                   availabilitydesc="Submissionhost:{0}".format(host),
                                   availabilityinfo="{0}".format(text))
             try:
-                XSLSPublisher.send(doc)
+                #XSLSPublisher.send(doc)
                 _logger.debug(str(doc.__dict__))
             except Exception as ex:
                 _logger.error(ex.message)

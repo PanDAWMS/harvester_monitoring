@@ -1,3 +1,4 @@
+import json
 import sqlite3
 from datetime import datetime, timedelta
 from logger import ServiceLogger
@@ -195,13 +196,13 @@ class Sqlite:
             except Exception as ex:
                 _logger.error(ex)
 
-    def instances_availability(self, lastsubmitedinstance, metrics):
+    def instances_availability(self, instancesinfo, metrics):
         """
         Check instances for availability and update SQLite cache
         """
         try:
-            if lastsubmitedinstance is None:
-                raise ValueError('lastsubmitedinstance is None')
+            if instancesinfo is None:
+                raise ValueError('instancesinfo is None')
             elif metrics is None:
                 raise ValueError('metrics is None')
             connection = self.connection
@@ -228,10 +229,10 @@ class Sqlite:
                                 instancesconfig[harvesterid][host]['metrics']['lastsubmittedworker']['enable']):
                                 timedelta_submitted = self.__get_timedelta(
                                     instancesconfig[harvesterid][host]['metrics']['lastsubmittedworker']['value'])
-                                if lastsubmitedinstance[harvesterid]['harvesterhost'][host][
+                                if instancesinfo[harvesterid]['harvesterhost'][host][
                                     'harvesterhostmaxtime'] < datetime.utcnow() - timedelta_submitted:
                                     error = "Last submitted worker was {0}".format(
-                                        str(lastsubmitedinstance[harvesterid]['harvesterhost'][host][
+                                        str(instancesinfo[harvesterid]['harvesterhost'][host][
                                                 'harvesterhostmaxtime'])) + '\n'
                                     error_text.add(error)
                                     avaibility.append(0)
@@ -241,6 +242,28 @@ class Sqlite:
                                 else:
                                     self.__delete_history_availability(harvesterid=harvesterid, harvesterhost=host,
                                                                        typeoferror='critical', textoferror='submitted')
+                                    if 'wstats' in instancesinfo[harvesterid]['harvesterhost'][host]:
+                                        limitmissedworkers = 50
+                                        if 'missed' in instancesinfo[harvesterid]['harvesterhost'][host]['wstats']:
+                                            total_workers = instancesinfo[harvesterid]['harvesterhost'][host]['wstats']['total_workers']
+                                            missed_workers = instancesinfo[harvesterid]['harvesterhost'][host]['wstats']['missed']
+                                            pmissedworkers = round((missed_workers/total_workers)*100)
+                                            wstats = str(json.dumps(instancesinfo[harvesterid]['harvesterhost'][host]['wstats']))
+
+                                            if pmissedworkers >= limitmissedworkers:
+                                                error = "The harvester host has many missed workers. Percent of missed workers: {0} % \nWorkers statuses for the previous 30 minutes: {1}"\
+                                                            .format(str(pmissedworkers), wstats[1:-1]) + '\n'
+                                                error_text.add(error)
+                                                avaibility.append(0)
+                                                self.__insert_history_availability(harvesterid=harvesterid, harvesterhost=host,
+                                                                                   typeoferror='critical',
+                                                                                   textoferror='missed',
+                                                                                   availability=0, notificated=0,
+                                                                                   fulltext=error)
+                                            else:
+                                                self.__delete_history_availability(harvesterid=harvesterid, harvesterhost=host,
+                                                                                   typeoferror='critical',
+                                                                                   textoferror='missed')
                             if harvesterid in metrics:
                                 ### No heartbeat ###
                                 heartbeattime = list(metrics[harvesterid][host].keys())[0]
@@ -377,7 +400,7 @@ class Sqlite:
                             query = \
                                 """insert into INSTANCES values ({0},{1},{2},{3},{4},{5},{6},{7},{8},{9})""".format(
                                     str(harvesterid), str(host),
-                                    str(lastsubmitedinstance[harvesterid]['harvesterhost'][host][
+                                    str(instancesinfo[harvesterid]['harvesterhost'][host][
                                             'harvesterhostmaxtime']),
                                     heartbeattime, 1, 0, min(avaibility) if len(avaibility) > 0 else 100, str(contacts),
                                     ''.join(str(e) for e in error_text) if len(
@@ -386,7 +409,7 @@ class Sqlite:
 
                             cur.execute("insert into INSTANCES values (?,?,?,?,?,?,?,?,?,?)",
                                         (str(harvesterid), str(host),
-                                         str(lastsubmitedinstance[harvesterid]['harvesterhost'][host][
+                                         str(instancesinfo[harvesterid]['harvesterhost'][host][
                                                  'harvesterhostmaxtime']),
                                          heartbeattime, 1, 0, min(avaibility) if len(avaibility) > 0 else 100,
                                          str(contacts), ''.join(str(e) for e in error_text) if len(
@@ -398,7 +421,7 @@ class Sqlite:
                             avaibility = min(avaibility) if len(avaibility) > 0 else 100
                             query = \
                                 """UPDATE INSTANCES SET lastsubmitted = '{0}', active = {1}, availability = {2}, lastheartbeat = '{3}', contacts = '{4}', errorsdesc = '{5}' WHERE harvesterid = '{6}' and harvesterhost = '{7}'""".format(
-                                    str(lastsubmitedinstance[harvesterid]['harvesterhost'][host][
+                                    str(instancesinfo[harvesterid]['harvesterhost'][host][
                                             'harvesterhostmaxtime']),
                                     1, avaibility, heartbeattime, str(contacts),
                                     ''.join(str(e) for e in error_text) if len(
