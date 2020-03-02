@@ -4,8 +4,8 @@ password: %TEIGI__pandadb__password__%
 description: %TEIGI__pandadb__description__%
 [logstash]
 auth: pandametrics,PanDA
-url: %TEIGI__logstash__host__%
-port: %TEIGI__logstash__port__%
+url: aipanda009.cern.ch
+port: 31311
 [othersettings]
 disks: cephfs,data,data1,data2
 processes: condor_schedd,condor_collector,condor_negotiator
