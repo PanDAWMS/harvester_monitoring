@@ -1,11 +1,11 @@
 [pandadb]
-login: DB_USER
-password: DB_PASSWORD
-description: DB_DESCRIPTION
+login: %TEIGI__pandadb__login__%
+password: %TEIGI__pandadb__password__%
+description: %TEIGI__pandadb__description__%
 [logstash]
 auth: pandametrics,PanDA
-url: host
-port: port
+url: %TEIGI__logstash__host__%
+port: %TEIGI__logstash__port__%
 [othersettings]
 disks: cephfs,data,data1,data2
 processes: condor_schedd,condor_collector,condor_negotiator

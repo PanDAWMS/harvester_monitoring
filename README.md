@@ -11,7 +11,7 @@ The Harvester service monitoring runs as a cronjob and checks prefedined Harvest
 - Last heartbeat
 
 ## Basic operations
-- Node: aipanda008
+- Node: aipanda009
 - Important folders:
   - [x] Work directory: */data/harvester_service_monitoring*
   - [x] Configuration: */data/harvester_service_monitoring/configuration* . Contains one XML file per harvester instance
