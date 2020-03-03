@@ -1,20 +1,11 @@
 import os
 import logging
 
-from pathlib import Path
-
-
 class ServiceLogger:
     def __init__(self, name, file, loglevel='DEBUG'):
-        p = str(Path(file).parent) + '/logs/'
-        i = 0
-        while True:
-            if not os.path.exists(p):
-                i = i + 1
-                p = str(Path(file).parents[i]) + '/logs/'
-            else:
-                self.dirpath = p
-                break
+        dir_logs = os.path.dirname(os.path.realpath(file)) + '/logs/'
+
+        self.dirpath = dir_logs
         self.logger = self.__get_logger(loglevel, name)
 
     # private method
