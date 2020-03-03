@@ -1,4 +1,5 @@
-import sys
+from os import sys
+
 from datetime import datetime
 
 import getopt
@@ -7,7 +8,7 @@ import subprocess, socket, re, cx_Oracle, requests, json
 
 from logger import ServiceLogger
 
-_logger = ServiceLogger("cron").logger
+_logger = ServiceLogger("cron",  __file__).logger
 
 
 def make_db_connection(cfg):
