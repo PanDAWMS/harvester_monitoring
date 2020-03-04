@@ -4,7 +4,6 @@ import logging
 class ServiceLogger:
     def __init__(self, name, file, loglevel='DEBUG'):
         dir_logs = os.path.dirname(os.path.realpath(file)) + '/logs/'
-
         self.dirpath = dir_logs
         self.logger = self.__get_logger(loglevel, name)
 

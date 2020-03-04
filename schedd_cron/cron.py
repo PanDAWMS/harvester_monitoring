@@ -69,8 +69,8 @@ def volume_use(volume_name):
     for line in output.split('\n'):
         if re.search(volume_name, line):
             used_amount = re.search(r"(\d+)\%", line).group(1)
-        else:
-            _logger.debug('df: "{0}": No such file or directory'.format(volume_name))
+    if used_amount == 0:
+        _logger.debug('df: "{0}": No such file or directory'.format(volume_name))
     try:
         used_amount_float = float(used_amount)
     except ValueError:
