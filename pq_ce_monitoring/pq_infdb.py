@@ -17,7 +17,7 @@ class InfluxPQ(InfluxDbBaseClass):
     def __init__(self, path):
         super().__init__(path)
 
-    def write_data(self, tdelta):
+    def write_data_backup(self, tdelta):
 
         date_key = datetime.now()
 
@@ -190,48 +190,101 @@ class InfluxPQ(InfluxDbBaseClass):
         except Exception as ex:
             _logger.error(ex)
 
-    def write_data_tmp(self, tdelta):
+    def write_data(self, tdelta=60):
 
         date_key = datetime.now()
 
         es = PandaQEs(self.path)
 
-        harvester_queues, harvester_computingelements = es.get_info_workers(tdelta=tdelta, type="ce_pq", time='endtime')
-
+        harvester_queues, harvester_computingelements, errors_df = es.get_workers_info(tdelta=tdelta, time='endtime')
         errors_object = Errors('patterns.txt')
+        errors_object_cl = Errors('patterns_cl.txt')
+        errors_object_cl_ml = Errors('patterns_cl_ml.txt')
+
+        if len(errors_df) != 0:
+            errors_object_cl.write_patterns(errors_df)
+            errors_object_cl_ml.write_patterns(errors_df, clustering_type='ML', mode='update', model_name='harvester_30days.model')
 
         harvester_queues_errors = {}
         harvester_computingelements_errors = {}
 
+        harvester_queues_errors_cl = {}
+        harvester_computingelements_errors_cl = {}
+
+        harvester_queues_errors_cl_ml = {}
+        harvester_computingelements_errors_cl_ml = {}
+
         for queuename in harvester_queues:
             if 'errors' in harvester_queues[queuename]:
-                harvester_queues_errors = errors_object.errors_accounting_tmp(queuename,
-                                                                              harvester_queues[queuename]['errors'],
-                                                                              harvester_queues_errors,
-                                                                              harvester_queues[queuename]['badworkers'])
+                harvester_queues_errors = errors_object.errors_accounting(queuename,
+                                                                          harvester_queues[queuename]['errors'],
+                                                                          harvester_queues_errors,
+                                                                          harvester_queues[queuename]['badworkers'])
+                # Cluster logs #
+                harvester_queues_errors_cl = errors_object_cl.errors_accounting(queuename,
+                                                                                harvester_queues[queuename]['errors'],
+                                                                                harvester_queues_errors_cl,
+                                                                                harvester_queues[queuename]['badworkers'])
+                # Cluster logs ML#
+                harvester_queues_errors_cl_ml = errors_object_cl_ml.errors_accounting(queuename,
+                                                                                harvester_queues[queuename]['errors'],
+                                                                                harvester_queues_errors_cl_ml,
+                                                                                harvester_queues[queuename]['badworkers'])
                 harvester_computingelements_errors[queuename] = {}
+                harvester_computingelements_errors_cl[queuename] = {}
+                harvester_computingelements_errors_cl_ml[queuename] = {}
+
             for ce in harvester_computingelements[queuename]:
                 if 'errors' in harvester_computingelements[queuename][ce]:
-                    harvester_computingelements_errors[queuename] = errors_object.errors_accounting_tmp(ce,
-                                                                                                        harvester_computingelements[
+                    harvester_computingelements_errors[queuename] = errors_object.errors_accounting(ce,
+                                                                                                    harvester_computingelements[
                                                                                                             queuename][
                                                                                                             ce][
                                                                                                             'errors'],
-                                                                                                        harvester_computingelements_errors[
+                                                                                                    harvester_computingelements_errors[
                                                                                                             queuename],
-                                                                                                        harvester_computingelements[
+                                                                                                    harvester_computingelements[
                                                                                                             queuename][
                                                                                                             ce][
                                                                                                             'badworkers'])
-
+                    # Cluster logs #
+                    harvester_computingelements_errors_cl[queuename] = errors_object_cl.errors_accounting(ce,
+                                                                                                          harvester_computingelements[
+                                                                                                            queuename][
+                                                                                                            ce][
+                                                                                                            'errors'],
+                                                                                                          harvester_computingelements_errors_cl[
+                                                                                                            queuename],
+                                                                                                          harvester_computingelements[
+                                                                                                            queuename][
+                                                                                                            ce][
+                                                                                                            'badworkers'])
+                    # Cluster logs ML#
+                    harvester_computingelements_errors_cl_ml[queuename] = errors_object_cl_ml.errors_accounting(ce,
+                                                                                                          harvester_computingelements[
+                                                                                                            queuename][
+                                                                                                            ce][
+                                                                                                            'errors'],
+                                                                                                          harvester_computingelements_errors_cl_ml[
+                                                                                                            queuename],
+                                                                                                          harvester_computingelements[
+                                                                                                            queuename][
+                                                                                                            ce][
+                                                                                                            'badworkers'])
         q_keys = list(harvester_queues.keys())
         q_errors_keys = list(harvester_queues_errors.keys())
 
         harvester_queues_json_influxdb = []
         harvester_queues_errors_json_influxdb = []
 
+        harvester_queues_errors_json_influxdb_cl = []
+        harvester_queues_errors_json_influxdb_cl_ml = []
+
         harvester_ce_json_influxdb = []
         harvester_ce_errors_json_influxdb = []
+
+        harvester_ce_errors_json_influxdb_cl = []
+        harvester_ce_errors_json_influxdb_cl_ml = []
 
         date_string = date_key.strftime("%Y-%m-%d %H:%M")[:-1] + '0:00'
         datetime_object = datetime.strptime(date_string, '%Y-%m-%d %H:%M:%S')
@@ -252,7 +305,7 @@ class InfluxPQ(InfluxDbBaseClass):
                             "atlas_site": queue['atlas_site'],
                             "status": queue['status'],
                             "harvester": queue['harvester'],
-                            "resource_type:": queue['resource_type']
+                            "resource_type": queue['resource_type']
                         },
                         "time": int(time_stamp),
                         "fields": {
@@ -274,7 +327,7 @@ class InfluxPQ(InfluxDbBaseClass):
                                     "errordesc": error,
                                     "harvester": queue['harvester'],
                                     "status": queue['status'],
-                                    "resource_type:": queue['resource_type']
+                                    "resource_type": queue['resource_type']
                                 },
                                 "time": int(time_stamp),
                                 "fields": {
@@ -286,7 +339,54 @@ class InfluxPQ(InfluxDbBaseClass):
                                 }
                             }
                         )
-
+                    ### Cluster log PQ###
+                    for error in harvester_queues_errors_cl[queuename]:
+                        harvester_queues_errors_json_influxdb_cl.append(
+                            {
+                                "measurement": "computingsite_errors_cl",
+                                "tags": {
+                                    "computingsite": queuename,
+                                    "cloud": queue['cloud'],
+                                    "atlas_site": queue['atlas_site'],
+                                    "errordesc": error,
+                                    "harvester": queue['harvester'],
+                                    "status": queue['status'],
+                                    "resource_type": queue['resource_type']
+                                },
+                                "time": int(time_stamp),
+                                "fields": {
+                                    "totalworkers": harvester_queues[queuename]['totalworkers'],
+                                    "goodworkers": harvester_queues[queuename]['goodworkers'],
+                                    "badworkers": harvester_queues[queuename]['badworkers'],
+                                    "error_count": harvester_queues_errors_cl[queuename][error]['error_count'],
+                                    "total_error_count": harvester_queues_errors_cl[queuename][error]['total_error_count'],
+                                }
+                            }
+                        )
+                    ### Cluster log ML PQ###
+                    for error in harvester_queues_errors_cl_ml[queuename]:
+                        harvester_queues_errors_json_influxdb_cl_ml.append(
+                            {
+                                "measurement": "computingsite_errors_cl_ml",
+                                "tags": {
+                                    "computingsite": queuename,
+                                    "cloud": queue['cloud'],
+                                    "atlas_site": queue['atlas_site'],
+                                    "errordesc": error,
+                                    "harvester": queue['harvester'],
+                                    "status": queue['status'],
+                                    "resource_type": queue['resource_type']
+                                },
+                                "time": int(time_stamp),
+                                "fields": {
+                                    "totalworkers": harvester_queues[queuename]['totalworkers'],
+                                    "goodworkers": harvester_queues[queuename]['goodworkers'],
+                                    "badworkers": harvester_queues[queuename]['badworkers'],
+                                    "error_count": harvester_queues_errors_cl_ml[queuename][error]['error_count'],
+                                    "total_error_count": harvester_queues_errors_cl_ml[queuename][error]['total_error_count'],
+                                }
+                            }
+                        )
             else:
                 harvester_queues_json_influxdb.append(
                     {
@@ -297,7 +397,7 @@ class InfluxPQ(InfluxDbBaseClass):
                             "atlas_site": queue['atlas_site'],
                             "status": queue['status'],
                             "harvester": queue['harvester'],
-                            "resource_type:": queue['resource_type']
+                            "resource_type": queue['resource_type']
                         },
                         "time": int(time_stamp),
                         "fields": {
@@ -332,7 +432,7 @@ class InfluxPQ(InfluxDbBaseClass):
                             "cloud": cloud,
                             "atlas_site": atlas_site,
                             "harvester": harvester,
-                            "resource_type:": resource_type
+                            "resource_type": resource_type
                         },
                         "time": int(time_stamp),
                         "fields": {
@@ -356,78 +456,107 @@ class InfluxPQ(InfluxDbBaseClass):
                                     "cloud": cloud,
                                     "atlas_site": atlas_site,
                                     "harvester": harvester,
-                                    "resource_type:": resource_type
+                                    "resource_type": resource_type
                                 },
                                 "time": int(time_stamp),
                                 "fields": {
                                     "totalworkers": harvester_computingelements[queuename][ce]['totalworkers'],
                                     "goodworkers": harvester_computingelements[queuename][ce]['goodworkers'],
                                     "badworkers": harvester_computingelements[queuename][ce]['badworkers'],
-                                    "error_count": harvester_computingelements_errors[queuename][ce][error][
-                                        'error_count'],
+                                    "error_count": harvester_computingelements_errors[queuename][ce][error]
+                                    ['error_count'],
                                     "total_error_count": harvester_computingelements_errors[queuename][ce][error][
                                         'total_error_count'],
                                 }
                             }
                         )
-        ### SCHEDDD monintoring ###
-        # for schedd in harvester_schedd:
-        #     for ce in harvester_schedd[schedd]:
-        #         harvester_schedd_json_influxdb.append(
-        #             {
-        #                 "measurement": "submissionhosts",
-        #                 "tags": {
-        #                     "submissionhost": schedd,
-        #                     "computingelement": ce
-        #                 },
-        #                 "time": int(time_stamp),
-        #                 "fields": {
-        #                     "totalworkers": harvester_schedd[schedd][ce]['totalworkers'],
-        #                     "goodworkers": harvester_schedd[schedd][ce]['goodworkers'],
-        #                     "badworkers": harvester_schedd[schedd][ce]['badworkers'],
-        #                 }
-        #             }
-        #         )
-        #         if schedd in harvester_schedd_errors and ce in harvester_schedd_errors[schedd]:
-        #             for error in harvester_schedd_errors[schedd][ce]:
-        #                 harvester_schedd_errors_json_influxdb.append(
-        #                     {
-        #                         "measurement": "submissionhost_errors",
-        #                         "tags": {
-        #                             "submissionhost": schedd,
-        #                             "computingelement": ce,
-        #                             "errordesc": error,
-        #                         },
-        #                         "time": int(time_stamp),
-        #                         "fields": {
-        #                             "totalworkers": harvester_schedd[schedd][ce]['totalworkers'],
-        #                             "goodworkers": harvester_schedd[schedd][ce]['goodworkers'],
-        #                             "badworkers": harvester_schedd[schedd][ce]['badworkers'],
-        #                             # "ratio": float(harvester_computingelements[ce]['ratio']),
-        #                             "error_count": harvester_schedd_errors[schedd][ce][error]['error_count'],
-        #                             "total_error_count": harvester_schedd_errors[schedd][ce][error][
-        #                                 'total_error_count'],
-        #                         }
-        #                     }
-        #                 )
-
+                    # Cluster logs #
+                    for error in harvester_computingelements_errors_cl[queuename][ce]:
+                        harvester_ce_errors_json_influxdb_cl.append(
+                            {
+                                "measurement": "computingelement_errors_cl",
+                                "tags": {
+                                    "computingsite": queuename,
+                                    "computingelement": ce,
+                                    "errordesc": error,
+                                    "status": status,
+                                    "cloud": cloud,
+                                    "atlas_site": atlas_site,
+                                    "harvester": harvester,
+                                    "resource_type": resource_type
+                                },
+                                "time": int(time_stamp),
+                                "fields": {
+                                    "totalworkers": harvester_computingelements[queuename][ce]['totalworkers'],
+                                    "goodworkers": harvester_computingelements[queuename][ce]['goodworkers'],
+                                    "badworkers": harvester_computingelements[queuename][ce]['badworkers'],
+                                    "error_count": harvester_computingelements_errors_cl[queuename][ce][error]
+                                    ['error_count'],
+                                    "total_error_count": harvester_computingelements_errors_cl[queuename][ce][error][
+                                        'total_error_count'],
+                                }
+                            }
+                        )
+                    # Cluster logs ML CE#
+                    for error in harvester_computingelements_errors_cl_ml[queuename][ce]:
+                        harvester_ce_errors_json_influxdb_cl_ml.append(
+                            {
+                                "measurement": "computingelement_errors_cl_ml",
+                                "tags": {
+                                    "computingsite": queuename,
+                                    "computingelement": ce,
+                                    "errordesc": error,
+                                    "status": status,
+                                    "cloud": cloud,
+                                    "atlas_site": atlas_site,
+                                    "harvester": harvester,
+                                    "resource_type": resource_type
+                                },
+                                "time": int(time_stamp),
+                                "fields": {
+                                    "totalworkers": harvester_computingelements[queuename][ce]['totalworkers'],
+                                    "goodworkers": harvester_computingelements[queuename][ce]['goodworkers'],
+                                    "badworkers": harvester_computingelements[queuename][ce]['badworkers'],
+                                    "error_count": harvester_computingelements_errors_cl_ml[queuename][ce][error]
+                                    ['error_count'],
+                                    "total_error_count": harvester_computingelements_errors_cl_ml[queuename][ce][error][
+                                        'total_error_count'],
+                                }
+                            }
+                        )
+        print('Completed')
         try:
-            pass#self.connection.write_points(harvester_queues_json_influxdb, time_precision='s', retention_policy="main")
+            self.connection.write_points(harvester_queues_json_influxdb, time_precision='s', retention_policy="main")
         except Exception as ex:
             _logger.error(ex)
         try:
-            pass#self.connection.write_points(harvester_queues_errors_json_influxdb, time_precision='s',retention_policy="main")
+            self.connection.write_points(harvester_queues_errors_json_influxdb, time_precision='s',retention_policy="main")
         except Exception as ex:
             _logger.error(ex)
         try:
-            pass#self.connection.write_points(harvester_ce_json_influxdb, time_precision='s', retention_policy="main")
+            self.connection.write_points(harvester_ce_json_influxdb, time_precision='s', retention_policy="main")
         except Exception as ex:
             _logger.error(ex)
         try:
-            pass#self.connection.write_points(harvester_ce_errors_json_influxdb, time_precision='s', retention_policy="main")
+            self.connection.write_points(harvester_ce_errors_json_influxdb, time_precision='s', retention_policy="main")
         except Exception as ex:
             _logger.error(ex)
-
+        try:
+            self.connection.write_points(harvester_queues_errors_json_influxdb_cl, time_precision='s',retention_policy="main")
+        except Exception as ex:
+            _logger.error(ex)
+        try:
+            self.connection.write_points(harvester_ce_errors_json_influxdb_cl, time_precision='s', retention_policy="main")
+        except Exception as ex:
+            _logger.error(ex)
+        try:
+            self.connection.write_points(harvester_queues_errors_json_influxdb_cl_ml, time_precision='s',retention_policy="main")
+        except Exception as ex:
+            _logger.error(ex)
+        try:
+            self.connection.write_points(harvester_ce_errors_json_influxdb_cl_ml, time_precision='s', retention_policy="main")
+        except Exception as ex:
+            _logger.error(ex)
     def write_stuck_ces(self):
 
         url = 'http://atlas-agis-api.cern.ch/request/pandaqueue/query/list/?json&preset=schedconf.all&vo_name=atlas'
@@ -548,8 +677,7 @@ class InfluxPQ(InfluxDbBaseClass):
                 )
 
         try:
-            pass
-            #self.connection.write_points(ces_stuck_json_influxdb, time_precision='s', retention_policy="main")
+            self.connection.write_points(ces_stuck_json_influxdb, time_precision='s', retention_policy="main")
         except Exception as ex:
             _logger.error(ex)
 
@@ -558,45 +686,83 @@ class InfluxPQ(InfluxDbBaseClass):
         es = PandaQEs(self.path)
 
         date_key = datetime.now()
-        date_string = date_key.strftime("%Y-%m-%d %H:%M")[:-1] + '0:00'
+        date_string = date_key.strftime("%Y-%m-%d %H:%M")[:-2] + '00:00'
         datetime_object = datetime.strptime(date_string, '%Y-%m-%d %H:%M:%S')
 
         time_stamp = time.mktime(datetime_object.timetuple())
 
-        ces_candidats_avg, ces_candidats_count = es.get_suspicious_ces()
+        inactive_candidats = es.get_inactive_elements()
         pq_candidats_avg, pq_candidats_count = es.get_suspicious_pq()
+        #ces_candidats_avg, ces_candidats_count = es.get_suspicious_ces()
 
         pq_candidats_count_json_influxdb = []
-        ce_candidats_count_json_influxdb = []
+        #ce_candidats_count_json_influxdb = []
+        inactivate_candidats_count_json_influxdb = []
 
-        for pq in pq_candidats_count:
-            pq_candidats_count_json_influxdb.append(
-                {
-                    "measurement": "suspicious_computingsite",
-                    "tags": {
-                        "computingsite": pq,
-                    },
-                    "time": int(time_stamp),
-                    "fields": pq_candidats_count[pq]
-                }
-            )
+        url = 'http://atlas-agis-api.cern.ch/request/pandaqueue/query/list/?json&preset=schedconf.all&vo_name=atlas'
+        resp = requests.get(url)
+        queues = resp.json()
+        q_keys = pq_candidats_count.keys()
 
-        for ce in ces_candidats_count:
-            ce_candidats_count_json_influxdb.append(
-                {
-                    "measurement": "suspicious_computingelement",
-                    "tags": {
-                        "computingelement": ce,
-                    },
-                    "time": int(time_stamp),
-                    "fields": ces_candidats_count[ce]
-                }
-            )
+        for queuename, queue in queues.items():
+            if queuename in q_keys:
+                pq_candidats_count_json_influxdb.append(
+                    {
+                        "measurement": "suspicious_computingsite",
+                        "tags": {
+                            "computingsite": queuename,
+                            "cloud": queue['cloud'],
+                            "atlas_site": queue['atlas_site'],
+                            "status": queue['status'],
+                            "harvester": queue['harvester'],
+                            "resource_type": queue['resource_type']
+                        },
+                        "time": int(time_stamp),
+                        "fields": pq_candidats_count[queuename]
+                    }
+                )
+
+        # for ce in ces_candidats_count:
+        #     ce_candidats_count_json_influxdb.append(
+        #         {
+        #             "measurement": "suspicious_computingelement",
+        #             "tags": {
+        #                 "computingelement": ce,
+        #             },
+        #             "time": int(time_stamp),
+        #             "fields": ces_candidats_count[ce]
+        #         }
+        #     )
+
+        q_keys = inactive_candidats.keys()
+
+        for queuename, queue in queues.items():
+            if queuename in q_keys:
+                for computingelment in inactive_candidats[queuename].keys():
+                    inactivate_candidats_count_json_influxdb.append(
+                        {
+                            "measurement": "inactive_elements",
+                            "tags": {
+                                "computingsite": queuename,
+                                "computingelement": computingelment,
+                                "cloud": queue['cloud'],
+                                "atlas_site": queue['atlas_site'],
+                                "status": queue['status'],
+                                "harvester": queue['harvester'],
+                                "resource_type": queue['resource_type'],
+                                "corecount": str(queue['corecount'])
+
+                            },
+                            "time": int(time_stamp),
+                            "fields": inactive_candidats[queuename][computingelment]
+                        }
+                    )
+        print('Completed')
         try:
             self.connection.write_points(pq_candidats_count_json_influxdb, time_precision='s', retention_policy="main")
         except Exception as ex:
             _logger.error(ex)
         try:
-            self.connection.write_points(ce_candidats_count_json_influxdb, time_precision='s', retention_policy="main")
+            self.connection.write_points(inactivate_candidats_count_json_influxdb, time_precision='s', retention_policy="main")
         except Exception as ex:
             _logger.error(ex)

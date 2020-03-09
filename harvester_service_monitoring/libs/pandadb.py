@@ -46,14 +46,14 @@ class PandaDB:
             AND x.harvester_host = t.harvester_host AND x.CREATION_TIME = t.CREATION_TIME"""
 
             results = self.__read_query(query, connection)
-            for result in results:
-                if result['harvester_id'] not in metrcis:
-                    metrcis[result['harvester_id']] = {}
-                if result['harvester_host'] not in metrcis[result['harvester_id']]:
-                    metrcis[result['harvester_id']][result['harvester_host']] = {}
-                metrcis[result['harvester_id']][result['harvester_host']].setdefault(result['creation_time'],
+            for row in results:
+                if row['harvester_id'] not in metrcis:
+                    metrcis[row['harvester_id']] = {}
+                if row['harvester_host'] not in metrcis[row['harvester_id']]:
+                    metrcis[row['harvester_id']][row['harvester_host']] = {}
+                metrcis[row['harvester_id']][row['harvester_host']].setdefault(row['creation_time'],
                                                                                      []).append(
-                    json.loads(result['metrics']))
+                    json.loads(row['metrics']))
             _logger.debug("Metrics: {0}".format(str(metrcis)))
             return metrcis
         except Exception as ex:

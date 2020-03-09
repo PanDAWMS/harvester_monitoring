@@ -31,11 +31,11 @@ class InfluxDbGahp(InfluxDbBaseClass):
             harvester_schedd_errors[schedd] = {}
             for ce in tmp_harvester_schedd[schedd]:
                 if 'errors' in tmp_harvester_schedd[schedd][ce]:
-                    harvester_schedd_errors[schedd] = errors_object.errors_accounting_tmp(ce,
-                                                                                          harvester_schedd[schedd][ce]
+                    harvester_schedd_errors[schedd] = errors_object.errors_accounting(ce,
+                                                                                      harvester_schedd[schedd][ce]
                                                                                           ['errors'],
-                                                                                          harvester_schedd_errors[schedd],
-                                                                                          harvester_schedd[schedd][ce]['badworkers'])
+                                                                                      harvester_schedd_errors[schedd],
+                                                                                      harvester_schedd[schedd][ce]['badworkers'])
         harvester_schedd_json_influxdb = []
         harvester_schedd_errors_json_influxdb = []
 
@@ -121,7 +121,6 @@ class InfluxDbGahp(InfluxDbBaseClass):
                                 }
                             }
                         )
-
         try:
             self.connection.write_points(harvester_schedd_json_influxdb, time_precision='s', retention_policy="main")
         except Exception as ex:

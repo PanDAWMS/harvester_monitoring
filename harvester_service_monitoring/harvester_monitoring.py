@@ -39,7 +39,8 @@ def main():
         if instance not in list(config.XMLconfiguration.keys()):
             continue
         for harvesterhost in instances[instance]:
-            if harvesterhost not in config.XMLconfiguration[instance].keys():
+            harvesterhosts_config = list(config.XMLconfiguration[instance].keys())
+            if harvesterhost not in harvesterhosts_config:
                 continue
             if harvesterhost != 'none':
                 availability = instances[instance][harvesterhost]['availability']
@@ -63,7 +64,7 @@ def main():
                             email = Notifications(text=mailtext,
                                                   subject='Service issues on {0} {1}'.format(instance, harvesterhost),
                                                   to=contacts)
-                            email.send_notification_email()
+                            #email.send_notification_email()
                             sqlite.update_entry('INSTANCES', 'notificated', 1, instance, harvesterhost)
                             email = {}
                 elif availability == 100 and notificated == 1:
