@@ -8,4 +8,4 @@ url: aipanda009.cern.ch
 port: 31311
 [othersettings]
 disks: cephfs,data,data2
-processes: condor_schedd,condor_collector,condor_negotiator
+processes: condor_schedd,condor_collector
