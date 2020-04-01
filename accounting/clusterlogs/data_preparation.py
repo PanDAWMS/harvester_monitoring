@@ -15,5 +15,5 @@ class Regex(object):
             item = re.sub(r'([a-zA-Z_.|:;-]*\d+[a-zA-Z_.|:;-]*)+', ' ', item)
             item = re.sub(r'[^\w\s]', ' ', item)
             item = re.sub(' +', ' ', item)
-            self.messages_cleaned[idx] =  item
+            self.messages_cleaned[idx] = item
         return self.messages_cleaned
