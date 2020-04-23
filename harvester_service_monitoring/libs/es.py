@@ -21,11 +21,11 @@ class Es(EsBaseClass):
 
         #s = s.exclude('terms', status=['missed'])
 
-        s.aggs.bucket('harvesterid', 'terms', field='harvesterid.keyword', size=1000) \
+        s.aggs.bucket('harvesterid', 'terms', field='harvesterid.keyword', size=10000) \
             .metric('max_submittime', 'max', field='submittime') \
             .metric('min_submittime', 'min', field='submittime') \
             .bucket('harvesterhost', 'terms', field='harvesterhost.keyword', order={'max_hostsubmittime': 'desc'},
-                    size=100) \
+                    size=10000) \
             .metric('max_hostsubmittime', 'max', field='submittime')
 
         s = s.execute()

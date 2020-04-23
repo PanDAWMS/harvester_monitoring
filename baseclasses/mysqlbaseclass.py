@@ -29,8 +29,7 @@ class MySQLBaseClass:
             print(ex)
         try:
             string_connection = """mysql+pymysql://{0}:{1}@{2}/{3}""".format(user, password, host, dbname)
-            engine = create_engine(string_connection)
-            connection = engine
+            connection = create_engine(string_connection)
             return connection
         except Exception as ex:
             _logger.error(ex)
