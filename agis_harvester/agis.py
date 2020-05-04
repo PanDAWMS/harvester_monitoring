@@ -17,9 +17,13 @@ class Agis(MySQLBaseClass):
         resp = requests.get(url)
         queues = resp.json()
         return queues
+
     def read_country_coordinates(self):
         countries = {}
-        with open('countries.json') as json_file:
+        from os import path
+        json_path = path.join(path.dirname(__file__)) + '/' + 'countries.json'
+
+        with open(json_path) as json_file:
             data = json.load(json_file)
             for country in data:
                 if country == 'United Kingdom':
@@ -31,10 +35,12 @@ class Agis(MySQLBaseClass):
                     countries['United States of America'] = country['latlng']
                 countries[country['name']] = country['latlng']
         return countries
+
     def write_filters(self):
         sites = self.__get_site_info()
         sites_dict = {}
         countries = self.read_country_coordinates()
+
         for site in sites:
             if site['latitude'] == 0 and site['longitude'] == 0:
                 # TODO redesign this fragment

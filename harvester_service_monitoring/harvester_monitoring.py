@@ -82,6 +82,5 @@ def main():
                     print(ex.message)
                 doc = {}
 
-
 if __name__ == "__main__":
     main()

@@ -4,6 +4,7 @@ import time
 from datetime import datetime
 
 from . pq_es import PandaQEs
+from . pq_pandadb import PandaDBPQ
 
 from baseclasses.infdbbaseclass import InfluxDbBaseClass
 from accounting.error_accounting import Errors
@@ -557,6 +558,7 @@ class InfluxPQ(InfluxDbBaseClass):
             self.connection.write_points(harvester_ce_errors_json_influxdb_cl_ml, time_precision='s', retention_policy="main")
         except Exception as ex:
             _logger.error(ex)
+
     def write_stuck_ces(self):
 
         url = 'http://atlas-agis-api.cern.ch/request/pandaqueue/query/list/?json&preset=schedconf.all&vo_name=atlas'
@@ -693,10 +695,8 @@ class InfluxPQ(InfluxDbBaseClass):
 
         inactive_candidats = es.get_inactive_elements()
         pq_candidats_avg, pq_candidats_count = es.get_suspicious_pq()
-        #ces_candidats_avg, ces_candidats_count = es.get_suspicious_ces()
 
         pq_candidats_count_json_influxdb = []
-        #ce_candidats_count_json_influxdb = []
         inactivate_candidats_count_json_influxdb = []
 
         url = 'http://atlas-agis-api.cern.ch/request/pandaqueue/query/list/?json&preset=schedconf.all&vo_name=atlas'
@@ -722,17 +722,6 @@ class InfluxPQ(InfluxDbBaseClass):
                     }
                 )
 
-        # for ce in ces_candidats_count:
-        #     ce_candidats_count_json_influxdb.append(
-        #         {
-        #             "measurement": "suspicious_computingelement",
-        #             "tags": {
-        #                 "computingelement": ce,
-        #             },
-        #             "time": int(time_stamp),
-        #             "fields": ces_candidats_count[ce]
-        #         }
-        #     )
 
         q_keys = inactive_candidats.keys()
 
@@ -764,5 +753,71 @@ class InfluxPQ(InfluxDbBaseClass):
             _logger.error(ex)
         try:
             self.connection.write_points(inactivate_candidats_count_json_influxdb, time_precision='s', retention_policy="main")
+        except Exception as ex:
+            _logger.error(ex)
+
+    def write_workers_jobs(self):
+
+        pq_running_stats = PandaDBPQ(self.path).get_running_workers_jobs()
+        pq_completed_stats = PandaDBPQ(self.path).get_running_workers_completed_jobs()
+
+        date_key = datetime.now()
+        date_string = date_key.strftime("%Y-%m-%d %H:%M")[:-2] + '00:00'
+        datetime_object = datetime.strptime(date_string, '%Y-%m-%d %H:%M:%S')
+
+        time_stamp = time.mktime(datetime_object.timetuple())
+
+        url = 'http://atlas-agis-api.cern.ch/request/pandaqueue/query/list/?json&preset=schedconf.all&vo_name=atlas'
+
+        resp = requests.get(url)
+        queues = resp.json()
+        q_run_keys = pq_running_stats.keys()
+        q_completed_keys = pq_completed_stats.keys()
+
+        running_workers_jobs_json_influxdb = []
+        completed_workers_jobs_json_influxdb = []
+
+        for queuename, queue in queues.items():
+            if queuename in q_run_keys:
+                running_workers_jobs_json_influxdb.append(
+                    {
+                        "measurement": "running_workers_jobs",
+                        "tags": {
+                            "computingsite": queuename,
+                            "cloud": queue['cloud'],
+                            "atlas_site": queue['atlas_site'],
+                            "status": queue['status'],
+                            "harvester": queue['harvester'],
+                            "resource_type": queue['resource_type']
+                        },
+                        "time": int(time_stamp),
+                        "fields": pq_running_stats[queuename]
+                    }
+                )
+
+        for queuename, queue in queues.items():
+            if queuename in q_completed_keys:
+                completed_workers_jobs_json_influxdb.append(
+                    {
+                        "measurement": "completed_workers_jobs",
+                        "tags": {
+                            "computingsite": queuename,
+                            "cloud": queue['cloud'],
+                            "atlas_site": queue['atlas_site'],
+                            "status": queue['status'],
+                            "harvester": queue['harvester'],
+                            "resource_type": queue['resource_type']
+                        },
+                        "time": int(time_stamp),
+                        "fields": pq_completed_stats[queuename]
+                    }
+                )
+        print("Completed")
+        try:
+            self.connection.write_points(running_workers_jobs_json_influxdb, time_precision='s', retention_policy="main")
+        except Exception as ex:
+            _logger.error(ex)
+        try:
+            self.connection.write_points(completed_workers_jobs_json_influxdb, time_precision='s', retention_policy="main")
         except Exception as ex:
             _logger.error(ex)
