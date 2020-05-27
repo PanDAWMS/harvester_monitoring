@@ -19,7 +19,7 @@ The Harvester service monitoring runs as a cronjob and checks prefedined Harvest
   - [x] Logging: */data/harvester_service_monitoring/logs*
   - [x] Cronjob: 
 ```
-[root@aipanda008 tmp]# cat /etc/crontab
+[root@aipanda009 tmp]# cat /etc/crontab
 ...
 */10 * * * * root /usr/bin/python /data/harvester_service_monitoring/harvester_monitoring.py > /dev/null 2>&1
 ```
