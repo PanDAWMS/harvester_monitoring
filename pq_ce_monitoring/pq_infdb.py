@@ -7,6 +7,7 @@ from . pq_es import PandaQEs
 from . pq_pandadb import PandaDBPQ
 
 from baseclasses.infdbbaseclass import InfluxDbBaseClass
+from baseclasses.cricinfobaseclass import CricInfo
 from accounting.error_accounting import Errors
 
 from logger import ServiceLogger
@@ -14,7 +15,7 @@ from logger import ServiceLogger
 _logger = ServiceLogger("pq_influxdb", __file__).logger
 
 
-class InfluxPQ(InfluxDbBaseClass):
+class InfluxPQ(InfluxDbBaseClass, CricInfo):
     def __init__(self, path):
         super().__init__(path)
 
@@ -64,9 +65,7 @@ class InfluxPQ(InfluxDbBaseClass):
         datetime_object = datetime.strptime(date_string, '%Y-%m-%d %H:%M:%S')
         time_stamp = time.mktime(datetime_object.timetuple())
 
-        url = 'http://atlas-agis-api.cern.ch/request/pandaqueue/query/list/?json&preset=schedconf.all&vo_name=atlas'
-        resp = requests.get(url)
-        queues = resp.json()
+        queues = self.get_pq_info()
 
         for queuename, queue in queues.items():
             if queuename in q_keys:
@@ -291,9 +290,7 @@ class InfluxPQ(InfluxDbBaseClass):
         datetime_object = datetime.strptime(date_string, '%Y-%m-%d %H:%M:%S')
         time_stamp = time.mktime(datetime_object.timetuple())
 
-        url = 'http://atlas-agis-api.cern.ch/request/pandaqueue/query/list/?json&preset=schedconf.all&vo_name=atlas'
-        resp = requests.get(url)
-        queues = resp.json()
+        queues = self.get_pq_info()
 
         for queuename, queue in queues.items():
             if queuename in q_keys:
@@ -561,9 +558,7 @@ class InfluxPQ(InfluxDbBaseClass):
 
     def write_stuck_ces(self):
 
-        url = 'http://atlas-agis-api.cern.ch/request/pandaqueue/query/list/?json&preset=schedconf.all&vo_name=atlas'
-        resp = requests.get(url)
-        queues = resp.json()
+        queues = self.get_pq_info()
 
         es = PandaQEs(self.path)
 
@@ -600,7 +595,7 @@ class InfluxPQ(InfluxDbBaseClass):
                 try:
                     status = queues[cs]['status']
                 except:
-                    status = 'This queue not found in AGIS'
+                    status = 'This queue not found in CRIC'
 
                 ces_stuck_json_influxdb.append(
                     {
@@ -623,9 +618,7 @@ class InfluxPQ(InfluxDbBaseClass):
 
     def write_stuck_ces_dev(self):
 
-        url = 'http://atlas-agis-api.cern.ch/request/pandaqueue/query/list/?json&preset=schedconf.all&vo_name=atlas'
-        resp = requests.get(url)
-        queues = resp.json()
+        queues = self.get_pq_info()
 
         es = PandaQEs(self.path)
 
@@ -661,7 +654,7 @@ class InfluxPQ(InfluxDbBaseClass):
                 try:
                     status = queues[cs]['status']
                 except:
-                    status = 'This queue not found in AGIS'
+                    status = 'This queue not found in CRIC'
 
                 ces_stuck_json_influxdb.append(
                     {
@@ -699,9 +692,7 @@ class InfluxPQ(InfluxDbBaseClass):
         pq_candidats_count_json_influxdb = []
         inactivate_candidats_count_json_influxdb = []
 
-        url = 'http://atlas-agis-api.cern.ch/request/pandaqueue/query/list/?json&preset=schedconf.all&vo_name=atlas'
-        resp = requests.get(url)
-        queues = resp.json()
+        queues = self.get_pq_info()
         q_keys = pq_candidats_count.keys()
 
         for queuename, queue in queues.items():
@@ -767,10 +758,8 @@ class InfluxPQ(InfluxDbBaseClass):
 
         time_stamp = time.mktime(datetime_object.timetuple())
 
-        url = 'http://atlas-agis-api.cern.ch/request/pandaqueue/query/list/?json&preset=schedconf.all&vo_name=atlas'
+        queues = self.get_pq_info()
 
-        resp = requests.get(url)
-        queues = resp.json()
         q_run_keys = pq_running_stats.keys()
         q_completed_keys = pq_completed_stats.keys()
 
