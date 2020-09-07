@@ -75,8 +75,8 @@ class Config:
             _logger.debug(str(configuration))
             return configuration
         except Exception as ex:
-            _logger.error(ex.message)
-            print (ex.message)
+            _logger.error(ex)
+            print(ex)
 
     #####private method####
     def __read_schedd_configs_xml(self, path):

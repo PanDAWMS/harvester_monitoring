@@ -1,11 +1,11 @@
 import json
 from baseclasses.mysqlbaseclass import MySQLBaseClass
-from baseclasses.cricinfobaseclass import CricInfo
+from baseclasses.cricinfo import CricInfo
 from logger import ServiceLogger
 
 _logger = ServiceLogger("filters", __file__, "ERROR").logger
 
-class Filters(MySQLBaseClass, CricInfo):
+class Filters(MySQLBaseClass):
     def __init__(self, path):
         super().__init__(path)
 
@@ -28,7 +28,11 @@ class Filters(MySQLBaseClass, CricInfo):
         return countries
 
     def write_filters(self):
-        sites = self.get_site_info()
+        cric = CricInfo(self.path)
+
+        url_site = 'https://atlas-cric.cern.ch/api/core/site/query/?json'
+        sites = cric.get_cric_info(url_site)
+
         sites_dict = {}
         countries = self.read_country_coordinates()
 
@@ -44,7 +48,8 @@ class Filters(MySQLBaseClass, CricInfo):
                 sites_dict[siteinfo['rcsite']['name']] = {'site_coordinates':'{0},{1}'.format(siteinfo['latitude'],
                                                                                               siteinfo['longitude'])}
 
-        queues = self.get_pq_info()
+        url_pq = 'https://atlas-cric.cern.ch/api/atlas/pandaqueue/query/?json'
+        queues = cric.get_cric_info(url_pq)
 
         for queuename, queue in queues.items():
             if queue['status'] in ['brokeroff', 'test', 'online']:

@@ -1,7 +1,6 @@
 import os
+import subprocess
 from datetime import datetime
-
-from cernservicexml import ServiceDocument, XSLSPublisher
 
 from os import sys, path
 sys.path.append(path.dirname(path.dirname(path.abspath(__file__))))
@@ -10,6 +9,7 @@ from libs.config import Config
 from libs.sqlite_cache import Sqlite
 from libs.es import Es
 from libs.notifications import Notifications
+from libs.kibanaXML import xml_doc
 
 from logger import ServiceLogger
 
@@ -32,6 +32,8 @@ def main():
     submissionhosts = sqlite.get_data(type='schedd')
 
     for host in submissionhosts:
+        kibana_xml = xml_doc()
+
         if host != 'none':
             availability = submissionhosts[host]['availability']
             notificated = submissionhosts[host]['notificated']
@@ -54,20 +56,29 @@ def main():
                         email = Notifications(text=mailtext,
                                               subject='Service issues on submissionhost: {0}'.format(host),
                                               to=contacts)
-                        email.send_notification_email()
+                        #email.send_notification_email()
                         sqlite.update_schedd_entry('SUBMISSIONHOSTS', 'notificated', 1, host)
                         email = {}
             elif availability == 100 and notificated == 1:
                 sqlite.update_schedd_entry('SUBMISSIONHOSTS', 'notificated', 0, host)
-            doc = ServiceDocument('schedd_{0}'.format(host), availability=availability, contact=','.join(contacts),
-                                  availabilitydesc="Submissionhost:{0}".format(host),
-                                  availabilityinfo="{0}".format(text))
+            id = 'PandaHarvesterSubmissionHSM'
+            kibana_xml.set_id('%s_%s' % (id, (str(host).split('.'))[0]))
+            kibana_xml.set_availability(str(availability))
+            kibana_xml.set_status(availability)
+            kibana_xml.set_avail_desc(host)
+            kibana_xml.set_avail_info(text)
+
             try:
-                #XSLSPublisher.send(doc)
-                _logger.debug(str(doc.__dict__))
+                tmp_xml = kibana_xml.print_xml('status')
+                file_name = '%s/xml/%s_%s_kibana.xml' % (
+                BASE_DIR, 'PandaHarvesterSubmissionHSM', (str(host).split('.'))[0])
+                tmp_file = open(file_name, 'w')
+                tmp_file.write(tmp_xml)
+                tmp_file.close()
+                subprocess.call(["curl", "-F", "file=@%s" % file_name, 'xsls.cern.ch'])
             except Exception as ex:
-                _logger.error(ex.message)
-                print(ex.message)
+                _logger.error(ex)
+                print(ex)
             doc = {}
 
 

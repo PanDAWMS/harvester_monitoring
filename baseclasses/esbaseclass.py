@@ -11,7 +11,7 @@ class EsBaseClass:
         self.connection = self.__make_connection(path=path)
 
     # private method
-    def __make_connection(self, path, use_ssl=True, verify_certs=False, timeout=30, max_retries=10,
+    def __make_connection(self, path, use_ssl=True, verify_certs=False, timeout=2000, max_retries=10,
                           retry_on_timeout=True):
         """
         Create a connection to ElasticSearch cluster

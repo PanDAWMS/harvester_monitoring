@@ -7,7 +7,7 @@ from . pq_es import PandaQEs
 from . pq_pandadb import PandaDBPQ
 
 from baseclasses.infdbbaseclass import InfluxDbBaseClass
-from baseclasses.cricinfobaseclass import CricInfo
+from baseclasses.cricinfo import CricInfo
 from accounting.error_accounting import Errors
 
 from logger import ServiceLogger
@@ -15,8 +15,10 @@ from logger import ServiceLogger
 _logger = ServiceLogger("pq_influxdb", __file__).logger
 
 
-class InfluxPQ(InfluxDbBaseClass, CricInfo):
+class InfluxPQ(InfluxDbBaseClass):
     def __init__(self, path):
+        self.cric = CricInfo(path)
+        self.url_pq = 'https://atlas-cric.cern.ch/api/atlas/pandaqueue/query/?json'
         super().__init__(path)
 
     def write_data_backup(self, tdelta):
@@ -65,7 +67,7 @@ class InfluxPQ(InfluxDbBaseClass, CricInfo):
         datetime_object = datetime.strptime(date_string, '%Y-%m-%d %H:%M:%S')
         time_stamp = time.mktime(datetime_object.timetuple())
 
-        queues = self.get_pq_info()
+        queues = self.cric.get_cric_info(self.url_pq)
 
         for queuename, queue in queues.items():
             if queuename in q_keys:
@@ -201,7 +203,7 @@ class InfluxPQ(InfluxDbBaseClass, CricInfo):
         errors_object_cl = Errors('patterns_cl.txt')
         errors_object_cl_ml = Errors('patterns_cl_ml.txt')
 
-        if len(errors_df) != 0:
+        if len(errors_df) != 0 and False:
             errors_object_cl.write_patterns(errors_df)
             errors_object_cl_ml.write_patterns(errors_df, clustering_type='ML', mode='update', model_name='harvester_30days.model')
 
@@ -290,7 +292,7 @@ class InfluxPQ(InfluxDbBaseClass, CricInfo):
         datetime_object = datetime.strptime(date_string, '%Y-%m-%d %H:%M:%S')
         time_stamp = time.mktime(datetime_object.timetuple())
 
-        queues = self.get_pq_info()
+        queues = self.cric.get_cric_info(self.url_pq)
 
         for queuename, queue in queues.items():
             if queuename in q_keys:
@@ -558,7 +560,7 @@ class InfluxPQ(InfluxDbBaseClass, CricInfo):
 
     def write_stuck_ces(self):
 
-        queues = self.get_pq_info()
+        queues = self.cric.get_cric_info(self.url_pq)
 
         es = PandaQEs(self.path)
 
@@ -618,7 +620,7 @@ class InfluxPQ(InfluxDbBaseClass, CricInfo):
 
     def write_stuck_ces_dev(self):
 
-        queues = self.get_pq_info()
+        queues = self.cric.get_cric_info(self.url_pq)
 
         es = PandaQEs(self.path)
 
@@ -692,7 +694,7 @@ class InfluxPQ(InfluxDbBaseClass, CricInfo):
         pq_candidats_count_json_influxdb = []
         inactivate_candidats_count_json_influxdb = []
 
-        queues = self.get_pq_info()
+        queues = self.cric.get_cric_info(self.url_pq)
         q_keys = pq_candidats_count.keys()
 
         for queuename, queue in queues.items():
@@ -758,7 +760,7 @@ class InfluxPQ(InfluxDbBaseClass, CricInfo):
 
         time_stamp = time.mktime(datetime_object.timetuple())
 
-        queues = self.get_pq_info()
+        queues = self.cric.get_cric_info(self.url_pq)
 
         q_run_keys = pq_running_stats.keys()
         q_completed_keys = pq_completed_stats.keys()

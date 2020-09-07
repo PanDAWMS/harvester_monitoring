@@ -23,23 +23,23 @@ class PandaQEs(EsBaseClass):
         s = s.filter('range', **{'endtime': {'gte': date_str.strftime("%Y-%m-%dT%H:%M")[:-1] + '0:00',
                                              'lt': datetime.utcnow().strftime("%Y-%m-%dT%H:%M")[:-1] + '0:00'}})
 
-        s.aggs.bucket('computingsite', 'terms', field='computingsite.keyword', size=50000)
+        s.aggs.bucket('computingsite', 'terms', field='computingsite.keyword', size=10000)
         s.aggs['computingsite'].bucket('workerstats', 'filters',
                                        filters={
                                            'good': Q('terms', status=['finished']),
                                            'bad': Q('terms', status=['cancelled', 'failed', 'missed'])
                                        }
                                        )
-        s.aggs['computingsite']['workerstats'].bucket('errors', 'terms', field='diagmessage.keyword', size=50000)
+        s.aggs['computingsite']['workerstats'].bucket('errors', 'terms', field='diagmessage.keyword', size=10000)
 
-        s.aggs.bucket('computingelement', 'terms', field='computingelement.keyword', size=50000)
+        s.aggs.bucket('computingelement', 'terms', field='computingelement.keyword', size=10000)
         s.aggs['computingelement'].bucket('workerstats', 'filters',
                                           filters={
                                               'good': Q('terms', status=['finished']),
                                               'bad': Q('terms', status=['cancelled', 'failed', 'missed'])
                                           }
                                           )
-        s.aggs['computingelement']['workerstats'].bucket('errors', 'terms', field='diagmessage.keyword', size=50000)
+        s.aggs['computingelement']['workerstats'].bucket('errors', 'terms', field='diagmessage.keyword', size=10000)
 
         s = s.execute()
         return s
@@ -132,10 +132,10 @@ class PandaQEs(EsBaseClass):
             s = s.filter('range', **{'submittime': {'gte': gte,
                                                     'lt': 'now'}})
 
-            s.aggs.bucket('computingelement', 'terms', field='computingelement.keyword', size=50000)
-            s.aggs['computingelement'].bucket('computingsites', 'terms', field='computingsite.keyword', size=50000)
+            s.aggs.bucket('computingelement', 'terms', field='computingelement.keyword', size=10000)
+            s.aggs['computingelement'].bucket('computingsites', 'terms', field='computingsite.keyword', size=10000)
             s.aggs['computingelement']['computingsites'].bucket('workersstatus', 'terms', field='status.keyword',
-                                                                size=50000)
+                                                                size=10000)
 
             s = s.execute()
 
@@ -198,7 +198,7 @@ class PandaQEs(EsBaseClass):
             s = Search(using=connection, index='atlas_harvesterworkers-*')
             s = s.filter('range', **{'submittime': {'gte': gte,
                                                     'lte': 'now'}})
-            s.aggs.bucket('computingelement', 'terms', field='computingelement.keyword', size=1000000)
+            s.aggs.bucket('computingelement', 'terms', field='computingelement.keyword', size=10000)
             s.aggs['computingelement'].bucket('computingelement_per_hour', 'date_histogram', field='submittime',
                                               interval='1h') \
                 .metric('computingelement_count', 'value_count', field='computingelement.keyword') \
@@ -301,7 +301,7 @@ class PandaQEs(EsBaseClass):
             s = Search(using=connection, index='atlas_harvesterworkers-*')
             s = s.filter('range', **{'submittime': {'gte': gte,
                                                     'lte': 'now'}})
-            s.aggs.bucket('computingsite', 'terms', field='computingsite.keyword', size=1000000)
+            s.aggs.bucket('computingsite', 'terms', field='computingsite.keyword', size=10000)
             s.aggs['computingsite'].bucket('computingsite_per_hour', 'date_histogram', field='submittime',
                                               interval='1h') \
                 .metric('computingsite_count', 'value_count', field='computingsite.keyword') \
@@ -396,15 +396,16 @@ class PandaQEs(EsBaseClass):
         connection = self.connection
 
         for gte in time_list:
-
+            print(gte)
             n_workers_count = {}
 
             s = Search(using=connection, index='atlas_harvesterworkers-*')
             s = s.filter('range', **{'submittime': {'gte': gte,
                                                     'lte': 'now'}})
-            s.aggs.bucket('computingsite', 'terms', field='computingsite.keyword', size=1000000)
-            s.aggs['computingsite'].bucket('computingelement', 'terms', field='computingelement.keyword', size=1000000)
-            s.aggs['computingsite']['computingelement'].bucket('computingelement_per_hour', 'date_histogram', field='submittime',
+            s.aggs.bucket('computingsite', 'terms', field='computingsite.keyword')
+            s.aggs['computingsite'].bucket('computingelement', 'terms', field='computingelement.keyword')
+            s.aggs['computingsite']['computingelement'].bucket('computingelement_per_hour', 'date_histogram',
+                                                               field='submittime',
                                               interval='1h') \
                 .metric('computingelement_count', 'value_count', field='computingelement.keyword') \
                 .metric('number_workers', 'sum', field='ncore')
@@ -420,6 +421,7 @@ class PandaQEs(EsBaseClass):
                         n_workers_count[computingsite.key][computingelement.key].append(nworkers)
                     n_workers_count[computingsite.key][computingelement.key] \
                         = np.mean(n_workers_count[computingsite.key][computingelement.key])
+
             for pq in n_workers_count.keys():
                 if pq not in inactive_elements:
                     inactive_elements[pq] = {}
@@ -429,7 +431,7 @@ class PandaQEs(EsBaseClass):
                         inactive_elements[pq][ce][gte] = n_workers_count[pq][ce]
                     else:
                         inactive_elements[pq][ce][gte] = n_workers_count[pq][ce]
-
+            s = None
         inactive_candidats = set()
 
         inList = inactive_elements
