@@ -1,36 +1,28 @@
+import getopt, subprocess, socket, re, cx_Oracle, requests, json, psutil, numpy as np
+
 from os import sys
-
 from datetime import datetime
-
-import getopt
 from configparser import ConfigParser
-import subprocess, socket, re, cx_Oracle, requests, json, psutil
-
 from logger import ServiceLogger
 
 _logger = ServiceLogger("cron", __file__).logger
-
 
 class DateTimeEncoder(json.JSONEncoder):
     def default(self, o):
         if isinstance(o, datetime):
             return o.isoformat()
 
-
 def cpu_info():
     cpu_times = psutil.cpu_times()
     cpu_usage_list = []
     for x in range(5):
-        cpu_usage_list.append(psutil.cpu_percent(interval=2))
-    # cpu_usage = psutil.cpu_percent()
+        cpu_usage_list.append(psutil.cpu_percent(interval=2, percpu=True))
     return cpu_times, cpu_usage_list
-
 
 def memory_info():
     memory_virtual = psutil.virtual_memory()
     memory_swap = psutil.swap_memory()
     return memory_virtual, memory_swap
-
 
 def disk_info(disk=''):
     if disk == '':
@@ -39,7 +31,6 @@ def disk_info(disk=''):
         full_path = '/' + disk
     disk_usage = psutil.disk_usage(full_path)
     return disk_usage
-
 
 def make_db_connection(cfg):
     try:
@@ -57,7 +48,6 @@ def make_db_connection(cfg):
         _logger.error(ex)
         return None
 
-
 def logstash_configs(cfg):
     try:
         url = cfg.get('logstash', 'url')
@@ -70,7 +60,6 @@ def logstash_configs(cfg):
         _logger.error('Settings for logstash not found')
         return None, None, None
 
-
 def servers_configs(cfg):
     try:
         metrics = [x.strip() for x in cfg.get('othersettings', 'metrics').split(',')]
@@ -82,7 +71,6 @@ def servers_configs(cfg):
     except:
         _logger.error('Settings for servers configs not found')
         return None, None
-
 
 def volume_use(volume_name):
     command = "df -Pkh /" + volume_name
@@ -104,7 +92,6 @@ def volume_use(volume_name):
 
     return used_amount_float
 
-
 def process_availability_psutil(process_name):
     availability = '0'
     avail_info = '{0} process not found'.format(process_name)
@@ -117,7 +104,6 @@ def process_availability_psutil(process_name):
 
     return availability, avail_info
 
-
 def process_availability(process_name):
     availability = '0'
     avail_info = '{0} process not found'.format(process_name)
@@ -128,7 +114,6 @@ def process_availability(process_name):
         availability = '100'
         avail_info = '{0} running'.format(process_name)
     return availability, avail_info
-
 
 def send_data(data, settings):
     url, port, auth = logstash_configs(settings)
@@ -143,7 +128,6 @@ def send_data(data, settings):
             _logger.error('Status code: {0}'.format(code.status_code))
     except Exception as ex:
         _logger.debug('Data can not be sent. {0}'.format(ex))
-
 
 def get_settings_path(argv):
     cfg = ConfigParser()
@@ -168,7 +152,6 @@ def get_settings_path(argv):
         _logger.error('Settings file not found. {0}'.format(path))
     return None, None
 
-
 def main():
     dict_metrics = {}
 
@@ -176,12 +159,12 @@ def main():
 
     if settings_path is not None:
         hostname = socket.gethostname()
-        dict_metrics['host'] = hostname
+        dict_metrics['hostname'] = hostname
         metrics, disk_list, process_list = servers_configs(settings_path)
 
         if 'cpu' in metrics:
             cpu_times, cpu_usage = cpu_info()
-            dict_metrics['avg_cpu_usage'] = sum(cpu_usage) / len(cpu_usage)
+            dict_metrics['avg_cpu_usage'] = np.array(cpu_usage).mean() / 100
 
         if 'memory' in metrics:
             memory_virtual, memory_swap = memory_info()
@@ -204,7 +187,7 @@ def main():
             dict_metrics['swap_used'] = memory_swap.used
             dict_metrics['swap_usage_pc'] = memory_swap.percent
             try:
-                dict_metrics['swap_free_pc'] = memory_swap.free * 100 / memory_swap.total
+                dict_metrics['swap_free_pc'] = (memory_swap.free / memory_swap.total) * 100
             except:
                 dict_metrics['swap_free_pc'] = 0
 
@@ -215,7 +198,7 @@ def main():
                 dict_metrics[diskname + '_used'] = disk.used
                 dict_metrics[diskname + '_free'] = disk.free
                 dict_metrics[diskname + '_usage_pc'] = disk.percent
-                dict_metrics[diskname + '_free_pc'] = disk.free * 100 / disk.total
+                dict_metrics[diskname + '_free_pc'] = (disk.free / disk.total) * 100
 
         if 'process' in metrics:
             for process in process_list:
