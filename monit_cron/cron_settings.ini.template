@@ -1,0 +1,12 @@
+[pandadb]
+login: %TEIGI__pandadb_login__%
+password: %TEIGI__pandadb_password__%
+description: %TEIGI__pandadb_description__%
+[logstash]
+auth: %TEIGI__logstash_login__%,%TEIGI__logstash_password__%
+url: aipanda013.cern.ch
+port: 31311
+[othersettings]
+metrics: cpu,memory,disk,process
+disks: data
+processes: httpd
