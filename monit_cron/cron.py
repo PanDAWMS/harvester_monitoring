@@ -177,7 +177,7 @@ def main():
             dict_metrics['memory_slab'] = memory_virtual.slab
             dict_metrics['memory_total'] = memory_virtual.total
             dict_metrics['memory_used'] = memory_virtual.used
-            dict_metrics['memory_usage_pc'] = memory_virtual.percent
+            dict_metrics['memory_usage_pc'] = memory_virtual.percent / 100
             dict_metrics['memory_free_pc'] = memory_virtual.available / memory_virtual.total
 
             dict_metrics['swap_free'] = memory_swap.free
@@ -185,7 +185,7 @@ def main():
             dict_metrics['swap_sout'] = memory_swap.sout
             dict_metrics['swap_total'] = memory_swap.total
             dict_metrics['swap_used'] = memory_swap.used
-            dict_metrics['swap_usage_pc'] = memory_swap.percent
+            dict_metrics['swap_usage_pc'] = memory_swap.percent / 100
             try:
                 dict_metrics['swap_free_pc'] = (memory_swap.free / memory_swap.total)
             except:
@@ -197,7 +197,7 @@ def main():
                 dict_metrics[diskname + '_total'] = disk.total
                 dict_metrics[diskname + '_used'] = disk.used
                 dict_metrics[diskname + '_free'] = disk.free
-                dict_metrics[diskname + '_usage_pc'] = disk.percent
+                dict_metrics[diskname + '_usage_pc'] = disk.percent / 100
                 dict_metrics[diskname + '_free_pc'] = (disk.free / disk.total)
 
         if 'process' in metrics:
