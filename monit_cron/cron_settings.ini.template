@@ -7,6 +7,7 @@ auth: %TEIGI__logstash_login__%,%TEIGI__logstash_password__%
 url: aipanda013.cern.ch
 port: 31311
 [othersettings]
-metrics: cpu,memory,disk,process
+metrics: cpu,memory,disk,process,subprocess
 disks: data
 processes: httpd
+subprocess: supervisorctl

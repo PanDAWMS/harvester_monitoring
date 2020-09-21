@@ -65,9 +65,10 @@ def servers_configs(cfg):
         metrics = [x.strip() for x in cfg.get('othersettings', 'metrics').split(',')]
         disk_list = [x.strip() for x in cfg.get('othersettings', 'disks').split(',')]
         process_list = [x.strip() for x in cfg.get('othersettings', 'processes').split(',')]
+        subprocess_list = [x.strip() for x in cfg.get('othersettings', 'subprocesses').split(',')]
         _logger.debug(
             'Server settings have been read. Disk list: {0}. Process list: {1}'.format(disk_list, process_list))
-        return metrics, disk_list, process_list
+        return metrics, disk_list, process_list, subprocess_list
     except:
         _logger.error('Settings for servers configs not found')
         return None, None
@@ -115,6 +116,21 @@ def process_availability(process_name):
         avail_info = '{0} running'.format(process_name)
     return availability, avail_info
 
+def subprocess_availability(subprocess_name):
+    availability = '0'
+    avail_info = '{0} process not found'.format(subprocess_name)
+    try:
+        output = subprocess.check_output([subprocess_name, "status"], stderr=subprocess.STDOUT)
+        if str(output) != "b''":
+            subprocess_info = output.decode('utf-8')
+            subprocess_info = subprocess_info.split()
+            if subprocess_info[1] == "RUNNING":
+                availability = '100'
+                avail_info = '{0} running'.format(subprocess_name)
+    except subprocess.CalledProcessError as e:
+        _logger.error(e.output)
+    return availability, avail_info
+
 def send_data(data, settings):
     url, port, auth = logstash_configs(settings)
     try:
@@ -160,7 +176,7 @@ def main():
     if settings_path is not None:
         hostname = socket.gethostname()
         dict_metrics['hostname'] = hostname
-        metrics, disk_list, process_list = servers_configs(settings_path)
+        metrics, disk_list, process_list, subprocess_list = servers_configs(settings_path)
 
         if 'cpu' in metrics:
             cpu_times, cpu_usage = cpu_info()
@@ -205,6 +221,12 @@ def main():
                 proc_avail, proc_avail_info = process_availability(process)
                 dict_metrics[process] = proc_avail
                 dict_metrics[process + '_info'] = proc_avail_info
+
+        if 'subprocess' in metrics:
+            for subprocess in subprocess_list:
+                proc_avail, proc_avail_info = subprocess_availability(subprocess)
+                dict_metrics[subprocess] = proc_avail
+                dict_metrics[subprocess + '_info'] = proc_avail_info
 
         dict_metrics['creation_time'] = datetime.utcnow()
         if type is not None:

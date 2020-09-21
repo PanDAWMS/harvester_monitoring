@@ -56,12 +56,12 @@ def main():
                         email = Notifications(text=mailtext,
                                               subject='Service issues on submissionhost: {0}'.format(host),
                                               to=contacts)
-                        #email.send_notification_email()
+                        email.send_notification_email()
                         sqlite.update_schedd_entry('SUBMISSIONHOSTS', 'notificated', 1, host)
                         email = {}
             elif availability == 100 and notificated == 1:
                 sqlite.update_schedd_entry('SUBMISSIONHOSTS', 'notificated', 0, host)
-            id = 'PandaHarvesterSubmissionHSM'
+            id = 'PandaHarvesterCondor'
             kibana_xml.set_id('%s_%s' % (id, (str(host).split('.'))[0]))
             kibana_xml.set_availability(str(availability))
             kibana_xml.set_status(availability)
@@ -71,7 +71,7 @@ def main():
             try:
                 tmp_xml = kibana_xml.print_xml('status')
                 file_name = '%s/xml/%s_%s_kibana.xml' % (
-                BASE_DIR, 'PandaHarvesterSubmissionHSM', (str(host).split('.'))[0])
+                BASE_DIR, 'PandaHarvesterCondor', (str(host).split('.'))[0])
                 tmp_file = open(file_name, 'w')
                 tmp_file.write(tmp_xml)
                 tmp_file.close()
