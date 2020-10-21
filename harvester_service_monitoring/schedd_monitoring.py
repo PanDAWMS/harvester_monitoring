@@ -10,6 +10,7 @@ from libs.sqlite_cache import Sqlite
 from libs.es import Es
 from libs.notifications import Notifications
 from libs.kibanaXML import xml_doc
+from libs.kibanaXSLS import SlsDocument
 
 from logger import ServiceLogger
 
@@ -33,6 +34,7 @@ def main():
 
     for host in submissionhosts:
         kibana_xml = xml_doc()
+        sls_doc = SlsDocument()
 
         if host != 'none':
             availability = submissionhosts[host]['availability']
@@ -61,7 +63,9 @@ def main():
                         email = {}
             elif availability == 100 and notificated == 1:
                 sqlite.update_schedd_entry('SUBMISSIONHOSTS', 'notificated', 0, host)
+
             id = 'PandaHarvesterCondor'
+
             kibana_xml.set_id('%s_%s' % (id, (str(host).split('.'))[0]))
             kibana_xml.set_availability(str(availability))
             kibana_xml.set_status(availability)
@@ -79,7 +83,16 @@ def main():
             except Exception as ex:
                 _logger.error(ex)
                 print(ex)
-            doc = {}
+
+            sls_doc.set_id('%s_%s' % (id, (str(host).split('.'))[0]))
+            sls_doc.set_status(availability)
+            sls_doc.set_avail_desc(host)
+            sls_doc.set_avail_info(text)
+
+            try:
+                sls_doc.send_document()
+            except Exception as ex:
+                _logger.error(ex)
 
 
 if __name__ == "__main__":

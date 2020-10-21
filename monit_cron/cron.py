@@ -127,6 +127,9 @@ def subprocess_availability(subprocess_name):
             if subprocess_info[1] == "RUNNING":
                 availability = '100'
                 avail_info = '{0} running'.format(subprocess_name)
+            else:
+                availability = '0'
+                avail_info = '{0} stopped'.format(subprocess_name)
     except subprocess.CalledProcessError as e:
         _logger.error(e.output)
     return availability, avail_info

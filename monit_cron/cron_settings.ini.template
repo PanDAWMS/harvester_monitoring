@@ -10,4 +10,4 @@ port: 31311
 metrics: cpu,memory,disk,process,subprocess
 disks: data
 processes: httpd
-subprocess: supervisorctl
+subprocesses: supervisorctl

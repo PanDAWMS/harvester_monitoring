@@ -11,6 +11,7 @@ from libs.pandadb import PandaDB
 from libs.es import Es
 from libs.notifications import Notifications
 from libs.kibanaXML import xml_doc
+from libs.kibanaXSLS import SlsDocument
 
 from logger import ServiceLogger
 
@@ -36,13 +37,12 @@ def main():
 
     instances = sqlite.get_data()
 
-
-
     for instance in instances:
         if instance not in list(config.XMLconfiguration.keys()):
             continue
         for harvesterhost in instances[instance]:
             kibana_xml = xml_doc()
+            sls_doc = SlsDocument()
 
             harvesterhosts_config = list(config.XMLconfiguration[instance].keys())
             if harvesterhost not in harvesterhosts_config:
@@ -69,13 +69,14 @@ def main():
                             email = Notifications(text=mailtext,
                                                   subject='Service issues on {0} {1}'.format(instance, harvesterhost),
                                                   to=contacts)
-                            email.send_notification_email()
+                            #email.send_notification_email()
                             sqlite.update_entry('INSTANCES', 'notificated', 1, instance, harvesterhost)
                             email = {}
                 elif availability == 100 and notificated == 1:
                     sqlite.update_entry('INSTANCES', 'notificated', 0, instance, harvesterhost)
 
                 id = 'PandaHarvesterHSM'
+
                 kibana_xml.set_id('%s_%s' % (id, (str(harvesterhost).split('.'))[0]))
                 kibana_xml.set_availability(str(availability))
                 kibana_xml.set_status(availability)
@@ -93,6 +94,16 @@ def main():
                     print(file_name)
                     _logger.error(ex)
                     print(ex)
+
+                sls_doc.set_id('%s_%s' % (id, (str(harvesterhost).split('.'))[0]))
+                sls_doc.set_status(availability)
+                sls_doc.set_avail_desc(instance)
+                sls_doc.set_avail_info(text)
+
+                try:
+                    sls_doc.send_document()
+                except Exception as ex:
+                    _logger.error(ex)
 
 if __name__ == "__main__":
     main()
