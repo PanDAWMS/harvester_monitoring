@@ -10,7 +10,6 @@ from libs.sqlite_cache import Sqlite
 from libs.pandadb import PandaDB
 from libs.es import Es
 from libs.notifications import Notifications
-from libs.kibanaXML import xml_doc
 from libs.kibanaXSLS import SlsDocument
 
 from logger import ServiceLogger
@@ -41,7 +40,6 @@ def main():
         if instance not in list(config.XMLconfiguration.keys()):
             continue
         for harvesterhost in instances[instance]:
-            kibana_xml = xml_doc()
             sls_doc = SlsDocument()
 
             harvesterhosts_config = list(config.XMLconfiguration[instance].keys())
@@ -76,24 +74,6 @@ def main():
                     sqlite.update_entry('INSTANCES', 'notificated', 0, instance, harvesterhost)
 
                 id = 'PandaHarvesterHSM'
-
-                kibana_xml.set_id('%s_%s' % (id, (str(harvesterhost).split('.'))[0]))
-                kibana_xml.set_availability(str(availability))
-                kibana_xml.set_status(availability)
-                kibana_xml.set_avail_desc(instance)
-                kibana_xml.set_avail_info(text)
-
-                try:
-                    tmp_xml = kibana_xml.print_xml('status')
-                    file_name = '%s/xml/%s_%s_kibana.xml' % (BASE_DIR, 'PandaHarvesterHSM', (str(harvesterhost).split('.'))[0])
-                    tmp_file = open(file_name, 'w')
-                    tmp_file.write(tmp_xml)
-                    tmp_file.close()
-                    subprocess.call(["curl", "-F", "file=@%s" % file_name, 'xsls.cern.ch'])
-                except Exception as ex:
-                    print(file_name)
-                    _logger.error(ex)
-                    print(ex)
 
                 sls_doc.set_id('%s_%s' % (id, (str(harvesterhost).split('.'))[0]))
                 sls_doc.set_status(availability)

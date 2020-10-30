@@ -9,7 +9,6 @@ from libs.config import Config
 from libs.sqlite_cache import Sqlite
 from libs.es import Es
 from libs.notifications import Notifications
-from libs.kibanaXML import xml_doc
 from libs.kibanaXSLS import SlsDocument
 
 from logger import ServiceLogger
@@ -33,7 +32,6 @@ def main():
     submissionhosts = sqlite.get_data(type='schedd')
 
     for host in submissionhosts:
-        kibana_xml = xml_doc()
         sls_doc = SlsDocument()
 
         if host != 'none':
@@ -65,24 +63,6 @@ def main():
                 sqlite.update_schedd_entry('SUBMISSIONHOSTS', 'notificated', 0, host)
 
             id = 'PandaHarvesterCondor'
-
-            kibana_xml.set_id('%s_%s' % (id, (str(host).split('.'))[0]))
-            kibana_xml.set_availability(str(availability))
-            kibana_xml.set_status(availability)
-            kibana_xml.set_avail_desc(host)
-            kibana_xml.set_avail_info(text)
-
-            try:
-                tmp_xml = kibana_xml.print_xml('status')
-                file_name = '%s/xml/%s_%s_kibana.xml' % (
-                BASE_DIR, 'PandaHarvesterCondor', (str(host).split('.'))[0])
-                tmp_file = open(file_name, 'w')
-                tmp_file.write(tmp_xml)
-                tmp_file.close()
-                subprocess.call(["curl", "-F", "file=@%s" % file_name, 'xsls.cern.ch'])
-            except Exception as ex:
-                _logger.error(ex)
-                print(ex)
 
             sls_doc.set_id('%s_%s' % (id, (str(host).split('.'))[0]))
             sls_doc.set_status(availability)
