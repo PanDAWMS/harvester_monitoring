@@ -302,6 +302,14 @@ class Sqlite:
                             memory_enable = self.__str_to_bool(
                                 instancesconfig[harvesterid][host]['metrics']['memory']['enable'])
 
+                            if 'certlifetime' in instancesconfig[harvesterid][host]['metrics']:
+                                cert_lifetime = int(instancesconfig[harvesterid][host]['metrics']['certlifetime']['value'])
+                                cert_lifetime_enable = self.__str_to_bool(
+                                    instancesconfig[harvesterid][host]['metrics']['certlifetime']['enable'])
+                            else:
+                                cert_lifetime = 0
+                                cert_lifetime_enable = False
+
                             #### Metrics DB ####
                             for metric in metrics[harvesterid][host][heartbeattime]:
                                 #### CPU ####
@@ -396,6 +404,21 @@ class Sqlite:
                                                                                typeoferror='critical',
                                                                                textoferror='disk1', availability=10,
                                                                                fulltext=error)
+                                #### Certificates ####
+                                if cert_lifetime_enable:
+                                    if 'cert_lifetime' in metric:
+                                        for cert in metric['cert_lifetime']:
+                                            cert_lifetime_h = metric['cert_lifetime'][cert]
+                                            if int(cert_lifetime_h) < cert_lifetime:
+                                                avaibility.append(50)
+                                                error = "Warning! Cert {0} has lifetime: {1} hours".format(
+                                                    str(cert), str(cert_lifetime_h)) + '\n'
+                                                error_text.add(error)
+                                                self.__insert_history_availability(harvesterid=harvesterid, harvesterhost=host,
+                                                                                   typeoferror='warning', textoferror='cert_{0}'.format(cert),
+                                                                                   availability=50, notificated=0,
+                                                                                   fulltext=error)
+
                         try:
                             query = \
                                 """insert into INSTANCES values ({0},{1},{2},{3},{4},{5},{6},{7},{8},{9})""".format(
@@ -486,7 +509,7 @@ class Sqlite:
                     critical_delay = self.__get_timedelta(
                         self.instancesconfigs[harvesterid][harvesterhost]['metrics']['critical_delay'])
                 else:
-                    critical_dscheddhosts_availabilityelay = self.__get_timedelta('6h')
+                    critical_delay = self.__get_timedelta('6h')
                 if ckeckmetrictime < datetime.utcnow() - critical_delay:
                     cur.execute(
                         "DELETE FROM HISTORYLOG "

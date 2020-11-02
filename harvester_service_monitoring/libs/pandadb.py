@@ -23,7 +23,7 @@ class PandaDB(OracleDbBaseClass):
             SELECT harvester_id, harvester_host, MAX(creation_time) AS CREATION_TIME
             FROM atlas_panda.harvester_metrics
             GROUP BY harvester_id, harvester_host) x 
-            JOIN atlas_panda.harvester_metrics t ON x.harvester_id =t.harvester_id
+            JOIN atlas_panda.harvester_metrics t ON x.harvester_id = t.harvester_id
             AND x.harvester_host = t.harvester_host AND x.CREATION_TIME = t.CREATION_TIME
             """
 
