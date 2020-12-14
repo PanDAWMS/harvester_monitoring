@@ -130,8 +130,8 @@ def subprocess_availability(subprocess_name):
             else:
                 availability = '0'
                 avail_info = '{0} stopped'.format(subprocess_name)
-    except subprocess.CalledProcessError as e:
-        _logger.error(e.output)
+    except:
+        pass
     return availability, avail_info
 
 def send_data(data, settings):
