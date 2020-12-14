@@ -221,16 +221,21 @@ def main():
 
         if 'process' in metrics:
             for process in process_list:
-                proc_avail, proc_avail_info = process_availability(process)
-                dict_metrics[process] = proc_avail
-                dict_metrics[process + '_info'] = proc_avail_info
+                try:
+                    proc_avail, proc_avail_info = process_availability(process)
+                    dict_metrics[process] = proc_avail
+                    dict_metrics[process + '_info'] = proc_avail_info
+                except Exception as ex:
+                    _logger.error(ex)
 
         if 'subprocess' in metrics:
             for subprocess in subprocess_list:
-                proc_avail, proc_avail_info = subprocess_availability(subprocess)
-                dict_metrics[subprocess] = proc_avail
-                dict_metrics[subprocess + '_info'] = proc_avail_info
-
+                try:
+                    proc_avail, proc_avail_info = subprocess_availability(subprocess)
+                    dict_metrics[subprocess] = proc_avail
+                    dict_metrics[subprocess + '_info'] = proc_avail_info
+                except Exception as ex:
+                    _logger.error(ex)
         dict_metrics['creation_time'] = datetime.utcnow()
         if type is not None:
             dict_metrics['monittype'] = type
