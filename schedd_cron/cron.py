@@ -83,7 +83,7 @@ def process_availability(process_name):
     availability = '0'
     avail_info = '{0} process not found'.format(process_name)
     output = subprocess.Popen("ps -eo pgid,args | grep {0} | grep -v grep | uniq".format(process_name),
-                              stdout=subprocess.PIPE, shell=True).communicate()[0]
+                              stdout=subprocess.PIPE, shell=True).communicate()[0].decode("utf-8")
     count = 0
     for line in output.split('\n'):
         line = line.strip()
