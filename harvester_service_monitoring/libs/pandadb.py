@@ -34,8 +34,12 @@ class PandaDB(OracleDbBaseClass):
                     metrcis[row['harvester_id']] = {}
                 if row['harvester_host'] not in metrcis[row['harvester_id']]:
                     metrcis[row['harvester_id']][row['harvester_host']] = {}
-                metrcis[row['harvester_id']][row['harvester_host']].setdefault(row['creation_time'],
+                try:
+                    metrcis[row['harvester_id']][row['harvester_host']].setdefault(row['creation_time'],
                                                                                      []).append(json.loads(row['metrics']))
+                except Exception as ex:
+                    print(ex)
+                    _logger.error(row['harvester_id'] + ' ' + row['harvester_host'] + ' ' + row['metrics'])
             _logger.debug("Metrics: {0}".format(str(metrcis)))
             return metrcis
         except Exception as ex:
