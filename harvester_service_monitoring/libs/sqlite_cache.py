@@ -30,6 +30,7 @@ class Sqlite:
         Get instances/schedd info from SQLite cache
         """
         connection = self.connection
+        instancesconfigs = list(self.instancesconfigs)
 
         if type == 'hsm':
             query = "SELECT * FROM INSTANCES"
@@ -50,41 +51,44 @@ class Sqlite:
         dataDict = {}
         if type == 'hsm':
             for instance in data:
-                if instance['harvesterid'] not in dataDict:
-                    dataDict[instance['harvesterid']] = {}
-                    if instance['harvesterhost'] not in dataDict[instance['harvesterid']]:
-                        dataDict[instance['harvesterid']][instance['harvesterhost']] = {
-                            'availability': instance['availability'], 'errorsdesc': instance['errorsdesc'],
-                            'contacts': instance['contacts'].split(','),
-                            'active': instance['active'], 'notificated': instance['notificated'],
-                            'pravailability': instance['pravailability']}
-                elif instance['harvesterid'] in dataDict:
-                    if instance['harvesterhost'] not in dataDict[instance['harvesterid']]:
-                        dataDict[instance['harvesterid']][instance['harvesterhost']] = {
-                            'availability': instance['availability'], 'errorsdesc': instance['errorsdesc'],
-                            'contacts': instance['contacts'].split(','),
-                            'active': instance['active'], 'notificated': instance['notificated'],
-                            'pravailability': instance['pravailability']}
-                        if 'none' in dataDict[instance['harvesterid']]:
-                            del dataDict[instance['harvesterid']]['none']
+                if instance['harvesterid'] in instancesconfigs:
+                    if instance['harvesterid'] not in dataDict:
+                        dataDict[instance['harvesterid']] = {}
+                        if instance['harvesterhost'] not in dataDict[instance['harvesterid']]:
+                            dataDict[instance['harvesterid']][instance['harvesterhost']] = {
+                                'availability': instance['availability'], 'errorsdesc': instance['errorsdesc'],
+                                'contacts': instance['contacts'].split(','),
+                                'active': instance['active'], 'notificated': instance['notificated'],
+                                'pravailability': instance['pravailability']}
+                    elif instance['harvesterid'] in dataDict:
+                        if instance['harvesterhost'] not in dataDict[instance['harvesterid']]:
+                            dataDict[instance['harvesterid']][instance['harvesterhost']] = {
+                                'availability': instance['availability'], 'errorsdesc': instance['errorsdesc'],
+                                'contacts': instance['contacts'].split(','),
+                                'active': instance['active'], 'notificated': instance['notificated'],
+                                'pravailability': instance['pravailability']}
+                            if 'none' in dataDict[instance['harvesterid']]:
+                                del dataDict[instance['harvesterid']]['none']
+
             return dataDict
         elif type == 'schedd':
             for submissionhost in data:
-                if submissionhost['submissionhost'] not in dataDict:
-                    dataDict[submissionhost['submissionhost']] = {}
-                    dataDict[submissionhost['submissionhost']] = {
-                        'availability': submissionhost['availability'], 'errorsdesc': submissionhost['errorsdesc'],
-                        'contacts': submissionhost['contacts'].split(','),
-                        'active': submissionhost['active'], 'notificated': submissionhost['notificated'],
-                        'pravailability': submissionhost['pravailability']}
-                elif submissionhost['submissionhost'] in dataDict:
-                    dataDict[submissionhost['submissionhost']] = {
-                        'availability': submissionhost['availability'], 'errorsdesc': submissionhost['errorsdesc'],
-                        'contacts': submissionhost['contacts'].split(','),
-                        'active': submissionhost['active'], 'notificated': submissionhost['notificated'],
-                        'pravailability': submissionhost['pravailability']}
-                    if 'none' in dataDict[submissionhost['submissionhost']]:
-                        del dataDict[submissionhost['submissionhost']]['none']
+                if submissionhost['submissionhost'] in instancesconfigs:
+                    if submissionhost['submissionhost'] not in dataDict:
+                        dataDict[submissionhost['submissionhost']] = {}
+                        dataDict[submissionhost['submissionhost']] = {
+                            'availability': submissionhost['availability'], 'errorsdesc': submissionhost['errorsdesc'],
+                            'contacts': submissionhost['contacts'].split(','),
+                            'active': submissionhost['active'], 'notificated': submissionhost['notificated'],
+                            'pravailability': submissionhost['pravailability']}
+                    elif submissionhost['submissionhost'] in dataDict:
+                        dataDict[submissionhost['submissionhost']] = {
+                            'availability': submissionhost['availability'], 'errorsdesc': submissionhost['errorsdesc'],
+                            'contacts': submissionhost['contacts'].split(','),
+                            'active': submissionhost['active'], 'notificated': submissionhost['notificated'],
+                            'pravailability': submissionhost['pravailability']}
+                        if 'none' in dataDict[submissionhost['submissionhost']]:
+                            del dataDict[submissionhost['submissionhost']]['none']
             return dataDict
 
     def get_history_logs(self, harvesterid, harvesterhost):
