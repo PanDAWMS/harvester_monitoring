@@ -11,7 +11,7 @@ class EsBaseClass:
         self.connection = self.__make_connection(path=path)
 
     # private method
-    def __make_connection(self, path, use_ssl=True, verify_certs=False, timeout=2000, max_retries=10,
+    def __make_connection(self, path, verify_certs=True, timeout=2000, max_retries=10,
                           retry_on_timeout=True):
         """
         Create a connection to ElasticSearch cluster
@@ -22,19 +22,19 @@ class EsBaseClass:
             eslogin = cfg.get('esserver', 'login')
             espasswd = cfg.get('esserver', 'password')
             host = cfg.get('esserver', 'host')
-            port = cfg.get('esserver', 'port')
+            сa_path = cfg.get('esserver', 'capath')
         except Exception as ex:
             _logger.error(ex)
             print(ex)
         try:
             connection = Elasticsearch(
-                [{'host': host, 'port': int(port)}],
+                ['https://{0}/es'.format(host)],
                 http_auth=(eslogin, espasswd),
-                use_ssl=use_ssl,
                 verify_certs=verify_certs,
                 timeout=timeout,
                 max_retries=max_retries,
                 retry_on_timeout=retry_on_timeout,
+                ca_certs=сa_path
             )
             return connection
         except Exception as ex:
