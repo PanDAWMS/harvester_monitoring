@@ -8,6 +8,7 @@ The Harvester service monitoring runs as a cronjob and checks prefedined Harvest
 - CPU usage
 - Disk usage
 - Last submission of workers
+- Fraction of workers in bad states, e.g. missed
 - Last heartbeat
 
 ## Basic operations
