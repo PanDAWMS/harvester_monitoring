@@ -68,8 +68,8 @@ def main():
             sls_doc.set_status(availability)
             sls_doc.set_avail_desc(host)
             sls_doc.set_avail_info(text)
-            sls_doc.set_webpage("https://twiki.cern.ch/twiki/bin/view/PanDA/CentralHarvesterInstances")
-            sls_doc.set_contact(', '.join(map(str, contacts)))
+            sls_doc.set_webpage("")
+            sls_doc.set_contact("")
 
             try:
                 sls_doc.send_document()
