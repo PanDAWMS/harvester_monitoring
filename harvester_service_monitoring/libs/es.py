@@ -52,14 +52,21 @@ class Es(EsBaseClass):
                 if harvesterid.key in worker_statuses:
                     if harvesterhost.key in worker_statuses[harvesterid.key]['harvesterhost']:
                         wstats = worker_statuses[harvesterid.key]['harvesterhost'][harvesterhost.key]['wstats']
+                        if 'computingsites' in worker_statuses[harvesterid.key]['harvesterhost'][harvesterhost.key] and \
+                                len(worker_statuses[harvesterid.key]['harvesterhost'][harvesterhost.key]['computingsites']) > 0:
+                            computingsites = worker_statuses[harvesterid.key]['harvesterhost'][harvesterhost.key]['computingsites']
+                        else:
+                            computingsites = 'None'
                     else:
                         wstats = 'None'
+
                 else:
                     wstats = 'None'
                 harvesteridDict[harvesterid.key]['harvesterhost'][harvesterhost.key] = {
                     'harvesterhostmaxtime': datetime.strptime(harvesterhost.max_hostsubmittime.value_as_string,
                                                               '%Y-%m-%dT%H:%M:%S.000Z'),
-                    'wstats': wstats
+                    'wstats': wstats,
+                    'computingsites': computingsites
 
                 }
         return harvesteridDict
@@ -75,6 +82,7 @@ class Es(EsBaseClass):
 
         s.aggs.bucket('harvesterid', 'terms', field='harvesterid.keyword', size=1000) \
             .bucket('harvesterhost', 'terms', field='harvesterhost.keyword', size=1000) \
+            .bucket('computingsite', 'terms', field='computingsite.keyword', size=1000) \
             .bucket('workerstatuses', 'terms', field='status.keyword', size=1000)
 
         s = s.execute()
@@ -92,10 +100,38 @@ class Es(EsBaseClass):
                     harvesteridDict[harvesterid.key]['harvesterhost'] = {}
                 harvesteridDict[harvesterid.key]['harvesterhost'][harvesterhost.key] = {}
                 harvesteridDict[harvesterid.key]['harvesterhost'][harvesterhost.key]['wstats'] = {}
-                if 'total_workers' not in harvesteridDict[harvesterid.key]['harvesterhost'][harvesterhost.key]['wstats']:
-                    harvesteridDict[harvesterid.key]['harvesterhost'][harvesterhost.key]['wstats']['total_workers'] = harvesterhost.doc_count
-                for status in harvesterhost.workerstatuses:
-                     harvesteridDict[harvesterid.key]['harvesterhost'][harvesterhost.key]['wstats'][status.key] = status.doc_count
+                harvesteridDict[harvesterid.key]['harvesterhost'][harvesterhost.key]['wstats']['total_workers'] = 0
+
+                for computingsite in harvesterhost.computingsite:
+                    if 'computingsites' not in harvesteridDict[harvesterid.key]['harvesterhost'][harvesterhost.key]:
+                        harvesteridDict[harvesterid.key]['harvesterhost'][harvesterhost.key]['computingsites'] = {}
+                    harvesteridDict[harvesterid.key]['harvesterhost'][harvesterhost.key]['computingsites'][computingsite.key] = {}
+                    harvesteridDict[harvesterid.key]['harvesterhost'][harvesterhost.key]['computingsites'][computingsite.key]['wstats'] = {}
+                    ### Stats for computingsites ###
+                    if 'total_workers' not in harvesteridDict[harvesterid.key]['harvesterhost'][harvesterhost.key]['computingsites'][computingsite.key]['wstats']:
+                        harvesteridDict[harvesterid.key]['harvesterhost'][harvesterhost.key]['computingsites'][computingsite.key]['wstats']['total_workers'] \
+                            = computingsite.doc_count
+
+                    ### Stats for harvesterhosts ###
+                    if 'total_workers' not in harvesteridDict[harvesterid.key]['harvesterhost'][harvesterhost.key]['wstats']:
+                        harvesteridDict[harvesterid.key]['harvesterhost'][harvesterhost.key]['wstats']['total_workers'] \
+                            = computingsite.doc_count
+                    else:
+                        harvesteridDict[harvesterid.key]['harvesterhost'][harvesterhost.key]['wstats']\
+                            ['total_workers'] += computingsite.doc_count
+
+                    for status in computingsite.workerstatuses:
+                        ### Stats for computingsites ###
+                        harvesteridDict[harvesterid.key]['harvesterhost'][harvesterhost.key]['computingsites'][computingsite.key]['wstats'][status.key] \
+                            = status.doc_count
+
+                        ### Stats for harvesterhosts ###
+                        if status.key not in harvesteridDict[harvesterid.key]['harvesterhost'][harvesterhost.key]['wstats']:
+                            harvesteridDict[harvesterid.key]['harvesterhost'][harvesterhost.key]['wstats'][
+                                 status.key] = status.doc_count
+                        else:
+                            harvesteridDict[harvesterid.key]['harvesterhost'][harvesterhost.key]['wstats'][status.key] \
+                                 += status.doc_count
 
         return harvesteridDict
 

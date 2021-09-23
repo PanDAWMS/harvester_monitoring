@@ -33,6 +33,9 @@ class SlsDocument:
     def set_avail_info(self, avail_info):
         self.info['availabilityinfo'] = avail_info
 
+    def set_webpage(self, webpage):
+        self.info['webpage'] = webpage
+
     def set_contact(self, contact):
         self.info['contact'] = contact
 

@@ -254,10 +254,31 @@ class Sqlite:
                                             pmissedworkers = round((missed_workers/total_workers)*100)
                                             wstats = str(json.dumps(instancesinfo[harvesterid]['harvesterhost'][host]['wstats']))
 
+
                                             if pmissedworkers >= limitmissedworkers:
                                                 error = "The harvester host has many missed workers. Percent of missed workers: {0} % \nWorkers statuses for the previous 30 minutes: {1}"\
                                                             .format(str(pmissedworkers), wstats[1:-1]) + '\n'
+
+                                                for computingsite in instancesinfo[harvesterid]['harvesterhost'][host][
+                                                    'computingsites']:
+                                                    if 'missed' in instancesinfo[harvesterid]['harvesterhost'][host]['computingsites'][
+                                                        computingsite]['wstats']:
+                                                        pq_total_workers = \
+                                                            instancesinfo[harvesterid]['harvesterhost'][host][
+                                                                'computingsites'][
+                                                                computingsite]['wstats']['total_workers']
+                                                        pq_missed_workers = \
+                                                            instancesinfo[harvesterid]['harvesterhost'][host][
+                                                                'computingsites'][
+                                                                computingsite]['wstats']['missed']
+                                                        ppqmissedworkers = round((pq_missed_workers/pq_total_workers)*100)
+                                                        error += \
+                                                            "Computingsite: {0} Total workers: {1} Missed workers: {2} Percent: {3}"\
+                                                                .format(computingsite, pq_total_workers,
+                                                                        pq_missed_workers, ppqmissedworkers) + '\n'
+
                                                 error_text.add(error)
+
                                                 avaibility.append(0)
                                                 self.__insert_history_availability(harvesterid=harvesterid, harvesterhost=host,
                                                                                    typeoferror='critical',
@@ -464,11 +485,9 @@ class Sqlite:
                     cur.execute("DELETE FROM INSTANCES WHERE harvesterid = ?", [str(harvesterid)])
                     connection.commit()
         except ValueError as vex:
-            _logger.error(vex)
-            print(vex)
-        except Exception as ex:
-            _logger.error(ex)
-            print(ex)
+            _logger.error(vex + 'HarvesterID: ' + harvesterid + 'SQL query: ' + query)
+        except Exception as vex:
+            _logger.error(vex + 'HarvesterID: ' + harvesterid + 'SQL query: ' + query)
     # private method
     def __delete_history_availability(self, harvesterid, harvesterhost, typeoferror, textoferror):
         """

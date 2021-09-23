@@ -1,5 +1,5 @@
 import os
-import subprocess
+
 from os import sys, path
 sys.path.append(path.dirname(path.dirname(path.abspath(__file__))))
 
@@ -67,18 +67,20 @@ def main():
                             email = Notifications(text=mailtext,
                                                   subject='Service issues on {0} {1}'.format(instance, harvesterhost),
                                                   to=contacts)
-                            #email.send_notification_email()
+                            email.send_notification_email()
                             sqlite.update_entry('INSTANCES', 'notificated', 1, instance, harvesterhost)
                             email = {}
                 elif availability == 100 and notificated == 1:
                     sqlite.update_entry('INSTANCES', 'notificated', 0, instance, harvesterhost)
 
-                id = 'PandaHarvesterHSM'
+                id = 'PandaHarvester'
 
                 sls_doc.set_id('%s_%s' % (id, (str(harvesterhost).split('.'))[0]))
                 sls_doc.set_status(availability)
                 sls_doc.set_avail_desc(instance)
                 sls_doc.set_avail_info(text)
+                sls_doc.set_webpage("https://twiki.cern.ch/twiki/bin/view/PanDA/CentralHarvesterInstances")
+                sls_doc.set_contact(', '.join(map(str, contacts)))
 
                 try:
                     sls_doc.send_document()
