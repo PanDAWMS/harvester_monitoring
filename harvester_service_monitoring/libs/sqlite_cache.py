@@ -339,7 +339,10 @@ class Sqlite:
                             for metric in metrics[harvesterid][host][heartbeattime]:
                                 #### CPU ####
                                 if cpu_enable:
-                                    cpu_pc = int(metric['cpu_pc'])
+                                    try:
+                                    	cpu_pc = int(metric['cpu_pc'])
+                                    except:
+                                        cpu_pc = 0
                                     if cpu_pc >= cpu_warning and cpu_pc < cpu_critical:
                                         avaibility.append(50)
                                         error = "Warning! CPU utilization:{0}".format(
