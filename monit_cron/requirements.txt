@@ -5,5 +5,5 @@ cx-Oracle==8.0.1
 idna==2.10
 psutil==5.7.2
 requests==2.24.0
-urllib3==1.25.10
+urllib3==1.26.5
 numpy==1.19.2
