@@ -59,7 +59,8 @@ class Filters(MySQLBaseClass):
             #ddm_end = ','.join(queue['ddmendpoints'])
             ddm_end = ''
             try:
-                del queue["jdladd"]
+                if "jdladd" in queue:
+                    del queue["jdladd"]
 
                 sql_reqeuest = """INSERT INTO pq_info(computingsite, atlas_site, cloud, agis_pq_status, pq_status, site_coordinates, ddm_storages, metadata) 
                 VALUES ('{0}','{1}','{2}','{3}','{4}','{5}','{6}','{7}')

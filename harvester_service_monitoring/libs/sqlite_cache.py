@@ -340,7 +340,7 @@ class Sqlite:
                                 #### CPU ####
                                 if cpu_enable:
                                     try:
-                                    	cpu_pc = int(metric['cpu_pc'])
+                                        cpu_pc = int(metric['cpu_pc'])
                                     except:
                                         cpu_pc = 0
                                     if cpu_pc >= cpu_warning and cpu_pc < cpu_critical:
@@ -363,10 +363,13 @@ class Sqlite:
                                                                            fulltext=error)
                                 #### Memory ####
                                 if memory_enable:
-                                    if 'memory_pc' in metric:
+                                    if 'memory_pc' in metric and metric['memory_pc'] is not None:
                                         memory_pc = int(metric['memory_pc'])
                                     else:
-                                        memory_pc = int(self.__get_change(metric['rss_mib'], memory))
+                                        if ('rss_mib' in metric and metric['rss_mib'] is not None) and memory is not None:
+                                            memory_pc = int(self.__get_change(metric['rss_mib'], memory))
+                                        else:
+                                            memory_pc = 100
                                     if memory_pc >= memory_warning and memory_pc < memory_critical:
                                         avaibility.append(50)
                                         error = "Warning! Memory consumption:{0}".format(
@@ -488,9 +491,9 @@ class Sqlite:
                     cur.execute("DELETE FROM INSTANCES WHERE harvesterid = ?", [str(harvesterid)])
                     connection.commit()
         except ValueError as vex:
-            _logger.error(vex + 'HarvesterID: ' + harvesterid + 'SQL query: ' + query)
+            _logger.error(str(vex) + 'HarvesterID: ' + harvesterid + 'SQL query: ' + query)
         except Exception as vex:
-            _logger.error(vex + 'HarvesterID: ' + harvesterid + 'SQL query: ' + query)
+            _logger.error(str(vex) + 'HarvesterID: ' + harvesterid + 'SQL query: ' + query)
     # private method
     def __delete_history_availability(self, harvesterid, harvesterhost, typeoferror, textoferror):
         """
