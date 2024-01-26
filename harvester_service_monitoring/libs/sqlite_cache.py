@@ -369,7 +369,7 @@ class Sqlite:
                                         if ('rss_mib' in metric and metric['rss_mib'] is not None) and memory is not None:
                                             memory_pc = int(self.__get_change(metric['rss_mib'], memory))
                                         else:
-                                            memory_pc = 100
+                                            memory_pc = -1
                                     if memory_pc >= memory_warning and memory_pc < memory_critical:
                                         avaibility.append(50)
                                         error = "Warning! Memory consumption:{0}".format(
