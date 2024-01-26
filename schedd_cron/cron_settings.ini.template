@@ -4,7 +4,7 @@ password: %TEIGI__pandadb_password__%
 description: %TEIGI__pandadb_description__%
 [logstash]
 auth: %TEIGI__logstash_login__%,%TEIGI__logstash_password__%
-url: aipanda009.cern.ch
+url: aipanda110.cern.ch
 port: 31311
 [othersettings]
 disks: cephfs,data,data2
