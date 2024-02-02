@@ -12,15 +12,15 @@ The Harvester service monitoring runs as a cronjob and checks prefedined Harvest
 - Last heartbeat
 
 ## Basic operations
-- Node: aipanda009
+- Node: aipanda110
 - Important folders:
-  - [x] Work directory: */data/harvester_monitoring/harvester_service_monitoring/*
-  - [x] Configuration: */data/harvester_monitoring/harvester_service_monitoring/configuration* . Contains one XML file per harvester instance
-  - [x] Internal SQLite cache: */data/harvester_monitoring/harvester_service_monitoring/storage*
-  - [x] Logging: */data/harvester_monitoring/harvester_service_monitoring/logs*
+  - [x] Work directory: */opt/harvester_monitoring/harvester_service_monitoring/*
+  - [x] Configuration: */opt/harvester_monitoring/harvester_service_monitoring/configuration* . Contains one XML file per harvester instance
+  - [x] Internal SQLite cache: */opt/harvester_monitoring/harvester_service_monitoring/storage*
+  - [x] Logging: */opt/harvester_monitoring/harvester_service_monitoring/logs*
   - [x] Cronjob: 
 ```
-[root@aipanda009 tmp]# cat /etc/crontab
+[root@aipanda110 tmp]# cat /etc/crontab
 ...
 */10 * * * * root /usr/bin/python /data/harvester_service_monitoring/harvester_monitoring.py > /dev/null 2>&1
 ```
