@@ -179,7 +179,14 @@ class Es(EsBaseClass):
 
         for hit in s.aggregations.submissionhost:
             key = str(hit.key).split(',')[0]
+            new_last_submittime = datetime.strptime(hit.max_submittime.value_as_string,
+                                                                                   '%Y-%m-%dT%H:%M:%S.000Z')
             if key in submissionhostDict:
-                submissionhostDict[key]['last_submittime'] = datetime.strptime(hit.max_submittime.value_as_string,
-                                                                               '%Y-%m-%dT%H:%M:%S.000Z')
+                if 'last_submittime' not in submissionhostDict[key]:
+
+                    submissionhostDict[key]['last_submittime'] = new_last_submittime
+                    old_last_submittime = new_last_submittime
+                else:
+                    if new_last_submittime > old_last_submittime:
+                        submissionhostDict[key]['last_submittime'] = new_last_submittime
         return submissionhostDict
