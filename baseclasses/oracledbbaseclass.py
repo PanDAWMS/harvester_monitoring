@@ -1,10 +1,11 @@
-import cx_Oracle
+import oracledb
 
 from configparser import ConfigParser
 from logger import ServiceLogger
 
-_logger = ServiceLogger("oracledb", __file__, 'ERROR').logger
+oracledb.init_oracle_client()
 
+_logger = ServiceLogger("oracledb", __file__, 'ERROR').logger
 class OracleDbBaseClass:
 
     def __init__(self, path):
@@ -25,7 +26,8 @@ class OracleDbBaseClass:
         except:
             pass
         try:
-            connection = cx_Oracle.connect(dbuser, dbpasswd, description)
+
+            connection = oracledb.connect(user=dbuser, password=dbpasswd, dsn=description)
             return connection
         except Exception as ex:
             _logger.error(ex)

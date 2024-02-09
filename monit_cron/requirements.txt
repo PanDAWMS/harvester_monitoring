@@ -7,3 +7,4 @@ psutil==5.7.2
 requests==2.24.0
 urllib3==1.25.10
 numpy
+oracledb
