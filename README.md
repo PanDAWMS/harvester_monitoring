@@ -1,7 +1,7 @@
 # Harvester service monitoring
 
 ## What is it
-The Harvester service monitoring runs as a cronjob and checks prefedined Harvester metrics available in Elastic Search. When the metrics exceed a threshold, alerts will be sent out by email to the responsible team.
+The Harvester service monitoring runs as a cronjob and checks prefedined Harvester metrics available in OpenSearch cluster. When the metrics exceed a threshold, alerts will be sent out by email to the responsible team.
 
 ## Current metrics
 - Memory usage
