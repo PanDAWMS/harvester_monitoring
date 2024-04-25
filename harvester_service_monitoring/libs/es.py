@@ -1,4 +1,4 @@
-from elasticsearch_dsl import Search
+from opensearchpy import Search
 from datetime import datetime
 from logger import ServiceLogger
 from baseclasses.esbaseclass import EsBaseClass
@@ -58,9 +58,11 @@ class Es(EsBaseClass):
                         else:
                             computingsites = 'None'
                     else:
+                        computingsites = 'None'
                         wstats = 'None'
 
                 else:
+                    computingsites = 'None'
                     wstats = 'None'
                 harvesteridDict[harvesterid.key]['harvesterhost'][harvesterhost.key] = {
                     'harvesterhostmaxtime': datetime.strptime(harvesterhost.max_hostsubmittime.value_as_string,
@@ -77,7 +79,7 @@ class Es(EsBaseClass):
         """
         connection = self.connection
 
-        s = Search(using=self.connection, index='atlas_harvesterworkers-*').filter('range', **{
+        s = Search(using=connection, index='atlas_harvesterworkers-*').filter('range', **{
             '@timestamp': {'gte': 'now-30m', 'lte': 'now'}})
 
         s.aggs.bucket('harvesterid', 'terms', field='harvesterid.keyword', size=1000) \

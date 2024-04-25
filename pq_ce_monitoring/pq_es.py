@@ -2,7 +2,7 @@ from datetime import datetime, timedelta
 
 import numpy as np
 import pandas as pd
-from elasticsearch_dsl import Search, Q
+from opensearchpy import Search, Q
 
 from baseclasses.esbaseclass import EsBaseClass
 from logger import ServiceLogger
@@ -46,7 +46,7 @@ class PandaQEs(EsBaseClass):
 
     def get_workers_info(self, tdelta, time='submittime'):
         """
-        Get workers info via SCAN from ElasticSearch cluster
+        Get workers info via SCAN from OpenSearch cluster
         :param tdelta: time interval. Default value is 60 minutes
         :param time: type of timestamp. Default value is submittime
         :return: PQ dict, CE dict, Data frame for clusterlogs

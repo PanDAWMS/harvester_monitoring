@@ -1,9 +1,11 @@
-import getopt, subprocess, socket, re, cx_Oracle, requests, json, psutil, numpy as np
+import getopt, subprocess, socket, re, oracledb, requests, json, psutil, numpy as np
 
 from os import sys
 from datetime import datetime
 from configparser import ConfigParser
 from logger import ServiceLogger
+
+oracledb.init_oracle_client(config_dir='/etc/tnsnames.ora')
 
 _logger = ServiceLogger("cron", __file__).logger
 
@@ -41,7 +43,7 @@ def make_db_connection(cfg):
         _logger.error('Settings for Oracle connection not found')
         return None
     try:
-        connection = cx_Oracle.connect(dbuser, dbpasswd, description)
+        connection = oracledb.connect(user=dbuser, password=dbpasswd, dsn=description)
         _logger.debug('DB connection established. "{0}" "{1}"'.format(dbuser, description))
         return connection
     except Exception as ex:

@@ -3,7 +3,7 @@ import oracledb
 from configparser import ConfigParser
 from logger import ServiceLogger
 
-oracledb.init_oracle_client()
+oracledb.init_oracle_client(config_dir='/etc/tnsnames.ora')
 
 _logger = ServiceLogger("oracledb", __file__, 'ERROR').logger
 class OracleDbBaseClass:
@@ -26,7 +26,6 @@ class OracleDbBaseClass:
         except:
             pass
         try:
-
             connection = oracledb.connect(user=dbuser, password=dbpasswd, dsn=description)
             return connection
         except Exception as ex:

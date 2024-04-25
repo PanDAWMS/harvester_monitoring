@@ -1,8 +1,8 @@
 from configparser import ConfigParser
-from elasticsearch import Elasticsearch
+from opensearchpy import OpenSearch
 from logger import ServiceLogger
 
-_logger = ServiceLogger("elasticsearch", __file__, "ERROR").logger
+_logger = ServiceLogger("opensearch", __file__, "ERROR").logger
 
 
 class EsBaseClass:
@@ -14,7 +14,7 @@ class EsBaseClass:
     def __make_connection(self, path, verify_certs=True, timeout=2000, max_retries=10,
                           retry_on_timeout=True):
         """
-        Create a connection to ElasticSearch cluster
+        Create a connection to OpenSearch cluster
         """
         try:
             cfg = ConfigParser()
@@ -27,8 +27,8 @@ class EsBaseClass:
             _logger.error(ex)
             print(ex)
         try:
-            connection = Elasticsearch(
-                ['https://{0}/es'.format(host)],
+            connection = OpenSearch(
+                ['https://{0}/os'.format(host)],
                 http_auth=(eslogin, espasswd),
                 verify_certs=verify_certs,
                 timeout=timeout,
