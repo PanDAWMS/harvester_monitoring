@@ -200,7 +200,7 @@ class Sqlite:
             except Exception as ex:
                 _logger.error(ex)
 
-    def instances_availability(self, instancesinfo, metrics):
+    def instances_availability(self, instancesinfo, metrics, pandadb):
         """
         Check instances for availability and update SQLite cache
         """
@@ -233,13 +233,22 @@ class Sqlite:
                                 instancesconfig[harvesterid][host]['metrics']['lastsubmittedworker']['enable']):
                                 timedelta_submitted = self.__get_timedelta(
                                     instancesconfig[harvesterid][host]['metrics']['lastsubmittedworker']['value'])
+                                ### Checking ElastciSearch data ###
                                 if instancesinfo[harvesterid]['harvesterhost'][host][
                                     'harvesterhostmaxtime'] < datetime.utcnow() - timedelta_submitted:
-                                    error = "Last submitted worker was {0}".format(
+                                    ### Checking PanDA DB data ###
+                                    harvesterhost_db = pandadb.get_last_worker(type='harvesterhost')
+
+                                    if host in harvesterhost_db and harvesterhost_db[host] < datetime.utcnow() - timedelta_submitted:
+                                        error = ("Last submitted worker was {0} [ElasticSearch]".format(
                                         str(instancesinfo[harvesterid]['harvesterhost'][host][
                                                 'harvesterhostmaxtime'])) + '\n'
-                                    error_text.add(error)
-                                    avaibility.append(0)
+                                                 + 'Last submitted worker was {0} [PandaDB]'.format(
+                                                    str(harvesterhost_db[host]))) + '\n'
+
+
+                                        error_text.add(error)
+                                        avaibility.append(0)
                                     self.__insert_history_availability(harvesterid=harvesterid, harvesterhost=host,
                                                                        typeoferror='critical', textoferror='submitted',
                                                                        availability=0, notificated=0, fulltext=error)
@@ -592,7 +601,7 @@ class Sqlite:
             return timedelta(minutes=int(time))
 
     # SCHEDD Cache
-    def scheddhosts_availability(self, metrics):
+    def scheddhosts_availability(self, metrics, pandadb):
         """
         Check submissionhost for availability and update SQLite cache
         """
@@ -613,21 +622,27 @@ class Sqlite:
                 ### Instance is enable ###
                 if submissionhostisenable:
                     avaibility = []
-
                     ### No submitted worker ###
-                    timedelta_submitted = timedelta(minutes=30)
                     if host != 'none' \
                             and self.__str_to_bool(schedd_configs[host]['metrics']['lastsubmittedworker']['enable']):
                         timedelta_submitted = self.__get_timedelta(
                             schedd_configs[host]['metrics']['lastsubmittedworker']['value'])
+                        ### Checking ElasticSearch data ###
                         if metrics[host]['last_submittime'] < datetime.utcnow() - timedelta_submitted:
-                            error = "Last submitted worker was {0}".format(
-                                str(metrics[host]['last_submittime'])) + '\n'
-                            error_text.add(error)
-                            avaibility.append(0)
-                            self.__insert_schedd_history_availability(submissionhost=host,
-                                                                      typeoferror='critical', textoferror='submitted',
-                                                                      availability=0, notificated=0, fulltext=error)
+
+                            submissionhosts_db = pandadb.get_last_worker(type='submissionhost')
+                            ### Checking PanDA db data ###
+                            if host in submissionhosts_db and submissionhosts_db[host] < datetime.utcnow() - timedelta_submitted:
+                                error = ("Last submitted worker was {0} [ElasticSearch]".format(
+                                    str(metrics[host]['last_submittime'])) + '\n'
+                                         + 'Last submitted worker was {0} [PandaDB]'.format(
+                                            str(submissionhosts_db[host]))) + '\n'
+
+                                error_text.add(error)
+                                avaibility.append(0)
+                                self.__insert_schedd_history_availability(submissionhost=host,
+                                                                          typeoferror='critical', textoferror='submitted',
+                                                                          availability=0, notificated=0, fulltext=error)
                         else:
                             self.__delete_schedd_history_availability(submissionhost=host,
                                                                       typeoferror='critical', textoferror='submitted')

@@ -45,7 +45,43 @@ class PandaDB(OracleDbBaseClass):
         except Exception as ex:
             _logger.error(ex)
             print(ex)
+    def get_last_worker(self, type='harvesterhost'):
+        """
+        Get last submitted worker from PandaDB
+        """
+        try:
+            connection = self.connection
+            hosts = {}
 
+            query = """
+                SELECT
+                  CASE
+                    WHEN INSTR({0}, ',') > 0 THEN
+                      SUBSTR({0}, 1, INSTR({0}, ',') - 1)
+                    ELSE
+                      {0}
+                  END AS {0},
+                  MAX(submittime) AS last_submittime
+                FROM
+                  ATLAS_PANDA.HARVESTER_WORKERS
+                WHERE
+                  SUBMITTIME >= CAST(sys_extract_utc(SYSTIMESTAMP) - INTERVAL '1' DAY AS DATE)
+                GROUP BY
+                  {0}
+            """.format(type)
+
+            results = self.__read_query(query, connection)
+
+            for row in results:
+                if row[type] not in hosts:
+                    hosts[row[type]] = {}
+                hosts[row[type]] = row['last_submittime']
+
+            return hosts
+
+        except Exception as ex:
+            _logger.error(ex)
+            print(ex)
     # private method
     def __read_query(self, query, connection):
         cursor = connection.cursor()

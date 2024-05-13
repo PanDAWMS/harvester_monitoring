@@ -10,6 +10,7 @@ from libs.sqlite_cache import Sqlite
 from libs.es import Es
 from libs.notifications import Notifications
 from libs.kibanaXSLS import SlsDocument
+from libs.pandadb import PandaDB
 
 from logger import ServiceLogger
 
@@ -25,10 +26,12 @@ def main():
     settings = path.abspath(path.join(path.dirname(__file__), '..', 'settings.ini'))
 
     es = Es(settings)
+    pandadb = PandaDB(settings)
 
     schedd_metrics = es.get_schedd_metrics()
-    sqlite.scheddhosts_availability(schedd_metrics)
-    #
+
+    sqlite.scheddhosts_availability(schedd_metrics, pandadb)
+
     submissionhosts = sqlite.get_data(type='schedd')
 
     for host in submissionhosts:

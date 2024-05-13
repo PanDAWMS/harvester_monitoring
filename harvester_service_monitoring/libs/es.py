@@ -191,4 +191,5 @@ class Es(EsBaseClass):
                 else:
                     if new_last_submittime > old_last_submittime:
                         submissionhostDict[key]['last_submittime'] = new_last_submittime
+
         return submissionhostDict

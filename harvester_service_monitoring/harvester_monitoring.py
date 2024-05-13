@@ -32,7 +32,7 @@ def main():
     metrics = pandadb.get_db_metrics()
 
     dictHarvesterInstnaces = es.get_workers_stats()
-    sqlite.instances_availability(dictHarvesterInstnaces, metrics)
+    sqlite.instances_availability(dictHarvesterInstnaces, metrics, pandadb)
 
     instances = sqlite.get_data()
 
