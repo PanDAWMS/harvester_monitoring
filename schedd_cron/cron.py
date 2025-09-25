@@ -4,7 +4,7 @@ from datetime import datetime
 
 import getopt
 from configparser import ConfigParser
-import subprocess, socket, re, cx_Oracle, requests, json
+import subprocess, socket, re, cx_Oracle, requests, json, shutil
 
 from logger import ServiceLogger
 
@@ -57,8 +57,16 @@ class DateTimeEncoder(json.JSONEncoder):
         if isinstance(o, datetime):
             return o.isoformat()
 
+def volume_use(path: str):
+    try:
+        total, used, free = shutil.disk_usage('/' + path.lstrip('/'))
+        if total == 0:
+            return None
+        return used / total * 100.0
+    except Exception:
+        return None
 
-def volume_use(volume_name):
+def volume_use_old(volume_name):
     command = "df -Pkh /" + volume_name
     used_amount = 0
     tmp_array = command.split()
