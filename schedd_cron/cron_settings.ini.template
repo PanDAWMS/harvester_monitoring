@@ -7,5 +7,5 @@ auth: %TEIGI__logstash_login__%,%TEIGI__logstash_password__%
 url: aipanda110.cern.ch
 port: 31311
 [othersettings]
-disks: cephfs,data,data2,root
+disks: cephfs,data,data2,var
 processes: condor_schedd,condor_collector
