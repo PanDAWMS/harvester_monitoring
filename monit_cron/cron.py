@@ -1,9 +1,10 @@
-import getopt, subprocess, socket, re, oracledb, requests, json, psutil, numpy as np
+import getopt, subprocess, socket, re, oracledb, requests, json, shutil, psutil, numpy as np
 
 from os import sys
 from datetime import datetime
 from configparser import ConfigParser
 from logger import ServiceLogger
+from pathlib import Path
 
 oracledb.init_oracle_client(config_dir='/etc/tnsnames.ora')
 
@@ -26,13 +27,23 @@ def memory_info():
     memory_swap = psutil.swap_memory()
     return memory_virtual, memory_swap
 
-def disk_info(disk=''):
-    if disk == '':
-        full_path = '/'
-    else:
-        full_path = '/' + disk
-    disk_usage = psutil.disk_usage(full_path)
-    return disk_usage
+def disk_info(disk: str = ""):
+    full_path = "/" if not disk else "/" + disk.lstrip("/")
+
+    if not Path(full_path).exists():
+        return None
+
+    if not Path(full_path).is_mount():
+        return None
+
+    try:
+        du = psutil.disk_usage(full_path)
+        return du
+
+    except OSError as ex:
+
+        return None
+
 
 def make_db_connection(cfg):
     try:

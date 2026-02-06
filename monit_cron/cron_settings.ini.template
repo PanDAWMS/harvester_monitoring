@@ -8,6 +8,6 @@ url: aipanda113.cern.ch
 port: 31311
 [othersettings]
 metrics: cpu,memory,disk,process,subprocess
-disks: data
+disks: data,cephfs,data2,var,root
 processes: httpd
 subprocesses: supervisorctl
