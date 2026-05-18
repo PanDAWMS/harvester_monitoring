@@ -658,7 +658,50 @@ class Sqlite:
                     processes_enable = self.__str_to_bool(
                         schedd_configs[host]['metrics']['processes']['enable'])
                     #### Metrics DB ####
+                    if host not in metrics:
+                        continue
+
                     for metric in metrics[host]:
+                        #### BAD WORKERS ####
+                        if metric == 'n_workers_bad_states':
+
+                            bad_workers = metrics[host].get('n_workers_bad_states', 0)
+                            total_workers = metrics[host].get('n_workers_created_total', 0)
+
+                            ratio = 0
+
+                            if total_workers > 0:
+                                ratio = float(bad_workers) / float(total_workers)
+
+                            BAD_WORKERS_RATIO_THRESHOLD = 0.25
+
+                            if ratio >= BAD_WORKERS_RATIO_THRESHOLD:
+
+                                avaibility.append(50)
+
+                                error = (
+                                            f"High number of workers in bad states detected. "
+                                            f"Bad workers: {bad_workers}, "
+                                            f"Total workers: {total_workers}, "
+                                            f"Ratio: {ratio:.2%}"
+                                        ) + '\n'
+
+                                error_text.add(error)
+
+                                self.__insert_schedd_history_availability(
+                                    submissionhost=host,
+                                    typeoferror='warning',
+                                    textoferror='bad_workers',
+                                    availability=50,
+                                    notificated=0,
+                                    fulltext=error
+                                )
+                            else:
+                                self.__delete_schedd_history_availability(
+                                    submissionhost=host,
+                                    typeoferror='warning',
+                                    textoferror='bad_workers'
+                                )
                         #### DISK  ####
                         if disk_enable and metric.startswith('disk_usage'):
                             disk_pc = int(metrics[host][metric])
@@ -841,7 +884,7 @@ class Sqlite:
                 query = """UPDATE SUBMISSIONHOSTS SET notificated = 0  WHERE submissionhost = ?"""
                 cur = connection.cursor()
 
-                cur.execute(query, (submissionhost))
+                cur.execute(query, (submissionhost,))
                 connection.commit()
             except Exception as ex:
                 _logger.error(ex)

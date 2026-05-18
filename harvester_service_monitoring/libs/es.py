@@ -160,7 +160,9 @@ class Es(EsBaseClass):
                                                                'condor_schedd', 'disk_usage_cephfs', 'disk_usage_data',
                                                                'disk_usage_data1', 'disk_usage_data1',
                                                                'disk_usage_data2',
-                                                               'n_workers_created_total'
+                                                               'n_workers_created_total',
+                                                               'n_workers_healthy_states',
+                                                               'n_workers_bad_states'
                                                                ], sort=[{'creation_time': 'desc'}]) \
             .metric('creation_time', 'max', field='creation_time')
 
