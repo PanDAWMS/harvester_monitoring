@@ -16,8 +16,8 @@
                         <value>30</value>
                     </metric>
                     <metric name="memory" enable="True">
-                        <memory_warning>70</memory_warning>
-                        <memory_critical>80</memory_critical>
+                        <memory_warning>80</memory_warning>
+                        <memory_critical>90</memory_critical>
                     </metric>
                     <metric name="cpu" enable="True">
                         <cpu_warning>70</cpu_warning>
