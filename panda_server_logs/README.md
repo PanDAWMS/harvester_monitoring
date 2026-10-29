@@ -15,7 +15,8 @@ nothing is stored between runs. A signature is flagged as:
 
 The email is sent every week, also when nothing is flagged. It contains the flagged,
 active and ignored signatures with their weekly counts, and the latest occurrence of each
-active signature with its full traceback, flagged ones first.
+active signature with its full traceback, flagged ones first. It is an HTML email (the
+signature IDs link to their samples) with a plain-text version for text-only clients.
 
 ## Ignored signatures
 Expected errors go into the ignore file of the log (e.g. `ignore_dbproxy.ini`), with a
@@ -37,7 +38,8 @@ the settings file can be anywhere.
 ```
 python3 panda_server_logs.py -s settings.ini -l dbproxy
 ```
-- `--dry-run`: print the email instead of sending it
+- `--dry-run`: print the text version of the email instead of sending it
+- `--html <file>`: also write the HTML version to a file, to look at it in a browser
 - `--replay <file>`: use a saved `_search` response instead of querying OpenSearch
 
 Logs go to `logs/panda_server_logs.log`. The exit code is 1 when the query or the email fails.
