@@ -18,7 +18,7 @@ Ignored signatures (ignore file) are excluded from the download, only
 counted, and can only be flagged as spike.
 
 Usage:
-  python3 panda_server_logs.py -s settings.ini -l dbproxy [--dry-run] [--replay saved_search.json]
+  python3 panda_server_logs.py -s settings.ini -l dbproxy [--dry-run] [--html report.html] [--replay saved_search.json]
 """
 
 import argparse
@@ -30,6 +30,9 @@ import statistics
 import sys
 from configparser import ConfigParser
 from datetime import datetime, timedelta, timezone
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+from html import escape
 
 from logger import ServiceLogger
 
@@ -60,7 +63,7 @@ MASK_RE = re.compile(r"'\*'|0xN|(?<![A-Za-z0-9_])N(?![A-Za-z0-9_])")
 
 SOURCE_FIELDS = ["@timestamp", "host.name", "event.original"]
 PAGE_SIZE = 1000
-# SMTP allows 998 characters per line; executemany errors dump whole bind arrays on one line
+# executemany errors dump whole bind arrays on one line
 MAX_LINE_CHARS = 990
 
 
@@ -301,6 +304,68 @@ def flag(groups, cfg):
             group["flags"].append("always")
 
 
+def time_str(timestamp):
+    return timestamp[:19].replace("T", " ")
+
+
+def sample_text(sample, max_chars):
+    lines = [line if len(line) <= MAX_LINE_CHARS else line[:MAX_LINE_CHARS] + " [...]" for line in sample.rstrip("\n").split("\n")]
+    text = "\n".join(lines)
+    if len(text) > max_chars:
+        text = text[:max_chars] + "\n[... cut]"
+    return text
+
+
+def sample_info(g):
+    """(time range, hosts) of a sample"""
+    return (
+        f"{g['counts'][0]} this week, {time_str(g['first'])} .. {time_str(g['last'])} UTC",
+        ", ".join(sorted(name.split(".")[0] for name in g["hosts"])),
+    )
+
+
+def summarize(cfg, groups, ranges, aggregations, truncated, n_docs, rules):
+    """The content of the report, shared by the text and the HTML version"""
+    period_totals = {int(b["key"]): b["doc_count"] for b in aggregations.get("periods", {}).get("buckets", [])}
+    total = period_totals.get(0, sum(g["counts"][0] for g in groups.values()))
+    by_count = sorted(groups.values(), key=lambda g: -g["counts"][0])
+    active = [g for g in by_count if g["counts"][0] > 0 and not g["ignored"]]
+    ignored = [g for g in by_count if g["ignored"]]
+    flagged = sorted((g for g in by_count if g["flags"]), key=lambda g: (-len(g["flags"]), -g["counts"][0]))
+    start, end = ranges[0]
+    level = cfg["log_level"]
+
+    warnings = []
+    if truncated:
+        warnings.append(f"stopped at max_documents={cfg['max_documents']}, the oldest weeks are incomplete, so 'new' may be wrong")
+    oldest = aggregations.get("oldest", {}).get("value_as_string")
+    if oldest and parse_timestamp(oldest) > ranges[-1][0] + timedelta(days=1):
+        warnings.append(f"OpenSearch only has data since {oldest[:10]}, so 'new' is compared with less history")
+
+    return {
+        "subject": f"[PanDA logs] {cfg['title']} {start:%Y-%m-%d} to {end:%Y-%m-%d}: " + (f"{len(flagged)} flagged" if flagged else "nothing new"),
+        "title": f"{cfg['title']}: {start:%Y-%m-%d %H:%M} to {end:%Y-%m-%d %H:%M} UTC",
+        "facts": [
+            f"Source: {cfg['index']} fields.type={cfg['log_type']} logLevel={level}",
+            f"This week: {total} {level}s, {len(active)} signatures, {len(ignored)} ignored signatures with {sum(g['counts'][0] for g in ignored)} {level}s",
+            f"Documents downloaded: {n_docs}",
+        ],
+        "warnings": warnings,
+        "ranges": ranges,
+        "flagged": flagged,
+        "active": active,
+        "ignored": ignored,
+        "rules": rules,
+        # the latest occurrence of each signature, flagged ones first
+        "samples": [g for g in flagged + [g for g in active if not g["flags"]] if g["sample"]],
+        "max_sample_chars": cfg["max_sample_chars"],
+    }
+
+
+NOTHING_FLAGGED = "Nothing new, spiking, or on the always-flag list."
+IGNORED_NOTE = "Excluded from the download and only counted, so a spike still shows."
+
+
 def text_table(header, rows):
     """Plain-text table with aligned columns; the last column (the longest) isn't padded"""
     rows = [[str(value) for value in row] for row in [header] + rows]
@@ -319,82 +384,121 @@ def signature_table(groups, reasons=None):
     return text_table(["ID", "Flags", "This week", "Previous", "Hosts", "Method | Error"], rows)
 
 
-def time_str(timestamp):
-    return timestamp[:19].replace("T", " ")
-
-
-def sample_text(sample, max_chars):
-    lines = [line if len(line) <= MAX_LINE_CHARS else line[:MAX_LINE_CHARS] + " [...]" for line in sample.rstrip("\n").split("\n")]
-    text = "\n".join(lines)
-    if len(text) > max_chars:
-        text = text[:max_chars] + "\n[... cut]"
-    return text
-
-
 def heading(title):
     return ["", title, "=" * len(title), ""]
 
 
-def build_report(cfg, groups, ranges, aggregations, truncated, n_docs, rules):
-    """Return the subject and the plain-text body of the report"""
-    period_totals = {int(b["key"]): b["doc_count"] for b in aggregations.get("periods", {}).get("buckets", [])}
-    total = period_totals.get(0, sum(g["counts"][0] for g in groups.values()))
-    by_count = sorted(groups.values(), key=lambda g: -g["counts"][0])
-    active = [g for g in by_count if g["counts"][0] > 0 and not g["ignored"]]
-    ignored = [g for g in by_count if g["ignored"]]
-    flagged = sorted((g for g in by_count if g["flags"]), key=lambda g: (-len(g["flags"]), -g["counts"][0]))
-    start, end = ranges[0]
-    level = cfg["log_level"]
+def render_text(report):
+    lines = [report["title"], ""] + [f"- {fact}" for fact in report["facts"]]
+    lines.append(f"- Compared with the previous {len(report['ranges']) - 1} weeks: 'Previous' lists their counts, newest first")
+    lines += [f"- WARNING: {warning}" for warning in report["warnings"]]
 
-    subject = f"[PanDA logs] {cfg['title']} {start:%Y-%m-%d} to {end:%Y-%m-%d}: " + (f"{len(flagged)} flagged" if flagged else "nothing new")
-    lines = [
-        f"{cfg['title']}: {start:%Y-%m-%d %H:%M} to {end:%Y-%m-%d %H:%M} UTC",
-        "",
-        f"- Source: {cfg['index']} fields.type={cfg['log_type']} logLevel={level}",
-        f"- This week: {total} {level}s, {len(active)} signatures, {len(ignored)} ignored signatures with {sum(g['counts'][0] for g in ignored)} {level}s",
-        f"- Documents downloaded: {n_docs}",
-        f"- Compared with the previous {len(ranges) - 1} weeks: 'Previous' lists their counts, newest first",
-    ]
-    if truncated:
-        lines.append(f"- WARNING: stopped at max_documents={cfg['max_documents']}, the oldest weeks are incomplete, so 'new' may be wrong")
-    oldest = aggregations.get("oldest", {}).get("value_as_string")
-    if oldest and parse_timestamp(oldest) > ranges[-1][0] + timedelta(days=1):
-        lines.append(f"- WARNING: OpenSearch only has data since {oldest[:10]}, so 'new' is compared with less history")
-
+    flagged, active, ignored = report["flagged"], report["active"], report["ignored"]
     lines += heading(f"Flagged ({len(flagged)})")
-    lines.append(signature_table(flagged) if flagged else "Nothing new, spiking, or on the always-flag list.")
+    lines.append(signature_table(flagged) if flagged else NOTHING_FLAGGED)
     lines += heading(f"Active signatures ({len(active)})")
     lines.append(signature_table(active) if active else "None.")
     if ignored:
         lines += heading(f"Ignored signatures ({len(ignored)})")
-        lines += ["Excluded from the download and only counted, so a spike still shows.", ""]
-        lines.append(signature_table(ignored, rules))
+        lines += [IGNORED_NOTE, ""]
+        lines.append(signature_table(ignored, report["rules"]))
 
-    # the latest occurrence of each signature, flagged ones first
     lines += heading("Samples")
-    for g in flagged + [g for g in active if not g["flags"]]:
-        if not g["sample"]:
-            continue
+    for g in report["samples"]:
         title = f"{g['id']} {g['method']} -- {g['error']}" + (f" ({', '.join(g['flags'])})" if g["flags"] else "")
-        lines += [
-            title,
-            "-" * min(len(title), 78),
-            f"{g['counts'][0]} this week, {time_str(g['first'])} .. {time_str(g['last'])} UTC",
-            f"Hosts: {', '.join(sorted(name.split('.')[0] for name in g['hosts']))}",
-            "",
-            sample_text(g["sample"], cfg["max_sample_chars"]),
-            "",
+        when, hosts = sample_info(g)
+        lines += [title, "-" * min(len(title), 78), when, f"Hosts: {hosts}", "", sample_text(g["sample"], report["max_sample_chars"]), ""]
+    return "\n".join(lines)
+
+
+# inline styles: mail clients (Outlook) drop most of <style>
+FLAG_COLORS = {"new": "#c62828", "spike": "#e65100", "always": "#6a1b9a"}
+TH_STYLE = "text-align:left;padding:4px 8px;border-bottom:2px solid #999;background:#f0f0f0;white-space:nowrap"
+TD_STYLE = "padding:4px 8px;border-bottom:1px solid #ddd;vertical-align:top"
+H3_STYLE = "font-size:16px;margin:24px 0 8px;border-bottom:1px solid #ccc;padding-bottom:2px"
+PRE_STYLE = (
+    "background:#f6f8fa;border:1px solid #ddd;padding:8px;font-size:12px;line-height:1.35;"
+    "white-space:pre-wrap;word-wrap:break-word;font-family:Consolas,Menlo,monospace"
+)
+
+
+def badges(flags):
+    return " ".join(
+        f'<span style="background:{FLAG_COLORS.get(flag, "#555")};color:#fff;border-radius:3px;padding:1px 6px;font-size:12px">{flag}</span>' for flag in flags
+    )
+
+
+def html_table(groups, ranges, linked, reasons=None):
+    """Signature table; the IDs with a sample link to it"""
+
+    def td(content, right=False):
+        return f'<td style="{TD_STYLE}' + (";text-align:right" if right else "") + f'">{content}</td>'
+
+    header = ["ID", "Flags", "This week"] + [f"{start:%b %d}" for start, _ in ranges[1:]] + ["Hosts", "Method", "Error"] + (["Reason"] if reasons else [])
+    rows = ["<tr>" + "".join(f'<th style="{TH_STYLE}">{escape(name)}</th>' for name in header) + "</tr>"]
+    for g in groups:
+        sig = escape(g["id"])
+        if g["id"] in linked:
+            sig = f'<a href="#s-{sig}">{sig}</a>'
+        cells = [td(f"<code>{sig}</code>"), td(badges(g["flags"])), td(f"<b>{g['counts'][0]}</b>", right=True)]
+        cells += [td(count, right=True) for count in g["counts"][1:]]
+        cells += [td(len(g["hosts"]) or "-", right=True), td(escape(g["method"])), td(f"<code>{escape(g['error'])}</code>")]
+        if reasons:
+            cells.append(td(escape(reasons[g["id"]]["reason"])))
+        rows.append("<tr>" + "".join(cells) + "</tr>")
+    return '<table style="border-collapse:collapse;font-size:13px">' + "".join(rows) + "</table>"
+
+
+def render_html(report):
+    ranges = report["ranges"]
+    linked = {g["id"] for g in report["samples"]}
+    flagged, active, ignored = report["flagged"], report["active"], report["ignored"]
+    facts = report["facts"] + [f"Compared with the previous {len(ranges) - 1} weeks, in the columns named after the day they start"]
+    parts = [
+        f'<h2 style="font-size:20px;margin:0 0 8px">{escape(report["title"])}</h2>',
+        '<ul style="margin:0 0 8px;padding-left:20px">' + "".join(f"<li>{escape(fact)}</li>" for fact in facts) + "</ul>",
+    ]
+    for warning in report["warnings"]:
+        parts.append(f'<div style="background:#fff8e1;border-left:4px solid #f9a825;padding:6px 10px;margin:6px 0"><b>Warning:</b> {escape(warning)}</div>')
+
+    parts.append(f'<h3 style="{H3_STYLE}">Flagged ({len(flagged)})</h3>')
+    parts.append(html_table(flagged, ranges, linked) if flagged else f"<p>{NOTHING_FLAGGED}</p>")
+    parts.append(f'<h3 style="{H3_STYLE}">Active signatures ({len(active)})</h3>')
+    parts.append(html_table(active, ranges, linked) if active else "<p>None.</p>")
+    if ignored:
+        parts.append(f'<h3 style="{H3_STYLE}">Ignored signatures ({len(ignored)})</h3>')
+        parts.append(f'<p style="margin:0 0 8px">{IGNORED_NOTE}</p>')
+        parts.append(html_table(ignored, ranges, linked, report["rules"]))
+
+    parts.append(f'<h3 style="{H3_STYLE}">Samples</h3>')
+    for g in report["samples"]:
+        sig = escape(g["id"])
+        when, hosts = sample_info(g)
+        parts += [
+            # name= for Outlook, id= for the others
+            f'<a name="s-{sig}" id="s-{sig}"></a>',
+            f'<p style="margin:18px 0 4px;font-size:14px"><code><b>{sig}</b></code> <b>{escape(g["method"])}</b> &mdash; '
+            f'<code>{escape(g["error"])}</code> {badges(g["flags"])}</p>',
+            f'<p style="margin:0 0 4px;color:#555;font-size:12px">{escape(when)}<br>Hosts: {escape(hosts)}</p>',
+            f'<pre style="{PRE_STYLE}">{escape(sample_text(g["sample"], report["max_sample_chars"]))}</pre>',
         ]
-    return subject, "\n".join(lines)
+    body = "\n".join(parts)
+    return (
+        '<!DOCTYPE html><html><head><meta charset="utf-8"></head>'
+        f'<body style="font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#222">\n{body}\n</body></html>'
+    )
 
 
-def send_email(cfg, subject, body):
+def send_email(cfg, subject, text, html):
     to = [address.strip() for address in cfg["to"].split(",") if address.strip()]
     if not to:
         raise RuntimeError("no email address in [email] to")
-    # Notifications doesn't separate the headers from the text, and smtplib only takes ASCII text
-    text = "\n" + body.encode("ascii", "replace").decode("ascii")
-    Notifications(to=to, mailserver=cfg["mailserver"], fromemail=cfg["from"], text=text, subject=subject).send_notification_email()
+    message = MIMEMultipart("alternative")
+    message.attach(MIMEText(text, "plain", "utf-8"))
+    message.attach(MIMEText(html, "html", "utf-8"))
+    # Notifications writes the text right after its Subject: line, so the MIME headers of the
+    # message continue the email headers; the parts are base64, so ASCII with short lines
+    Notifications(to=to, mailserver=cfg["mailserver"], fromemail=cfg["from"], text=message.as_string(), subject=subject).send_notification_email()
 
 
 def read_config(settings, section, settings_path):
@@ -430,7 +534,8 @@ def main():
     parser = argparse.ArgumentParser(description="Weekly email report of PanDA server log error signatures")
     parser.add_argument("-s", "--settings", required=True, help="settings file")
     parser.add_argument("-l", "--log", required=True, help="section of the settings file with the log to report")
-    parser.add_argument("--dry-run", action="store_true", help="print the email instead of sending it")
+    parser.add_argument("--dry-run", action="store_true", help="print the text version of the email instead of sending it")
+    parser.add_argument("--html", help="also write the HTML version of the email to this file, e.g. to look at it in a browser")
     parser.add_argument("--replay", help="read a saved _search response instead of querying OpenSearch")
     args = parser.parse_args()
 
@@ -460,14 +565,18 @@ def main():
         groups, n_docs = collect(results.pages(), cfg, ranges, rules)
         add_ignored_counts(groups, results.aggregations, rules, n_periods)
         flag(groups, cfg)
-        subject, body = build_report(cfg, groups, ranges, results.aggregations, results.truncated, n_docs, rules)
+        report = summarize(cfg, groups, ranges, results.aggregations, results.truncated, n_docs, rules)
+        text, html = render_text(report), render_html(report)
         n_flagged = sum(1 for g in groups.values() if g["flags"])
         _logger.info(f"{args.log}: {n_docs} documents, {len(groups)} signatures, {n_flagged} flagged, truncated={results.truncated}")
 
+        if args.html:
+            with open(args.html, "w") as f:
+                f.write(html)
         if args.dry_run:
-            print(f"Subject: {subject}\n\n{body}")
+            print(f"Subject: {report['subject']}\n\n{text}")
             return 0
-        send_email(cfg, subject, body)
+        send_email(cfg, report["subject"], text, html)
         _logger.info(f"{args.log}: sent to {cfg['to']}")
         return 0
     except Exception as ex:
