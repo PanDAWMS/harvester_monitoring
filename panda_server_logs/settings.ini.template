@@ -1,8 +1,5 @@
-[esserver]
-login: %TEIGI__esserver_login__%
-password: %TEIGI__esserver_password__%
-host: os-atlas.cern.ch:443
-capath: /etc/pki/tls/certs/ca-bundle.crt
+# The OpenSearch account ([esserver]) is read from the settings.ini of the repository,
+# like the other monitoring scripts; an [esserver] section here overrides it.
 [email]
 # comma-separated; a log section can set its own "to"
 to: fernando.harald.barreiro.megino@cern.ch

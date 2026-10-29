@@ -26,10 +26,13 @@ Keep the noisy signatures in this file: without it, the job downloads every docu
 of the 4 weeks (stopped at `max_documents`).
 
 ## Configuration
-`settings.ini.template`, with the secrets filled in by teigi:
-- `[esserver]`: OpenSearch account, the same as the other monitoring scripts
+`settings.ini.template`, with no secrets:
 - `[email]`: recipients, mail server and sender
 - one section per log, e.g. `[dbproxy]`
+
+The OpenSearch account (`[esserver]`) is read from the `settings.ini` of the repository,
+shared with the other monitoring scripts. An `[esserver]` section in the settings file
+overrides it.
 
 ## Running
 The email is sent with `harvester_service_monitoring/libs/notifications.py`, so the script

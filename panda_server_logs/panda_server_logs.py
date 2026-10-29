@@ -42,6 +42,8 @@ from harvester_service_monitoring.libs.notifications import Notifications  # noq
 
 _logger = ServiceLogger("panda_server_logs", __file__).logger
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+# the settings of all the monitoring scripts, with the [esserver] account
+GENERAL_SETTINGS = os.path.join(os.path.dirname(SCRIPT_DIR), "settings.ini")
 
 # "2026-10-23 08:04:58,182 panda.log.DBProxy: ERROR    " -- the Python logging prefix
 HEADER_RE = re.compile(r"^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2},\d+ \S+: [A-Z]+\s+")
@@ -540,7 +542,9 @@ def main():
     args = parser.parse_args()
 
     try:
+        # the general settings first, so that the settings file can override them
         settings = ConfigParser(interpolation=None)
+        settings.read(GENERAL_SETTINGS)
         if not settings.read(args.settings):
             raise RuntimeError(f"cannot read settings file {args.settings}")
         cfg = read_config(settings, args.log, args.settings)
