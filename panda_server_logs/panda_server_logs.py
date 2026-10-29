@@ -34,13 +34,12 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from html import escape
 
-from logger import ServiceLogger
-
-# the email library of harvester_service_monitoring, so this runs from the repository checkout
+# the logger and the email library of the repository, so this runs from the repository checkout
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from harvester_service_monitoring.libs.notifications import Notifications  # noqa: E402
+from logger import ServiceLogger  # noqa: E402
 
-_logger = ServiceLogger("panda_server_logs", __file__).logger
+_logger = ServiceLogger("panda_server_logs", __file__, "INFO").logger
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 # the settings of all the monitoring scripts, with the [esserver] account
 GENERAL_SETTINGS = os.path.join(os.path.dirname(SCRIPT_DIR), "settings.ini")
