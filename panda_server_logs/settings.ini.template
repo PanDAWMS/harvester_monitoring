@@ -3,8 +3,11 @@ login: %TEIGI__esserver_login__%
 password: %TEIGI__esserver_password__%
 host: os-atlas.cern.ch:443
 capath: /etc/pki/tls/certs/ca-bundle.crt
-[mattermost]
-webhook_url: %TEIGI__panda_logs_mattermost_webhook__%
+[email]
+# comma-separated; a log section can set its own "to"
+to: fernando.harald.barreiro.megino@cern.ch
+mailserver: localhost
+from: atlpan@mail.cern.ch
 
 # One section per log; each cron job runs one of them with -l <section>.
 [dbproxy]
@@ -15,7 +18,7 @@ log_type: dbproxyfiltered
 log_level: ERROR
 # Field with a parsed error code; when present it is the error part of the signature
 code_field: dbErrorCode
-# Signatures that are expected, relative to this file
+# Signatures that are expected, relative to the script directory (in git)
 ignore_file: ignore_dbproxy.ini
 # Flagged whenever they occur (deadlocks, value too large)
 always_flag: ORA-00060,ORA-01438
@@ -27,5 +30,5 @@ spike_factor: 5
 spike_min_count: 50
 # Stop downloading after this many documents; the report says so
 max_documents: 200000
-# Optional, if the webhook may post to other channels
-# channel: panda-logs
+# Each sample (full event with traceback) is cut to this many characters
+max_sample_chars: 10000

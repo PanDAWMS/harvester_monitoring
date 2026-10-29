@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Weekly report of the error signatures in a PanDA server log, read from
-OpenSearch and posted to Mattermost.
+OpenSearch and sent by email.
 
 A signature is "<method> | <error>": the method is the first word of the
 message (PanDA's "<method> < <context> > <error>" shape), the error is the
@@ -31,11 +31,14 @@ import sys
 from configparser import ConfigParser
 from datetime import datetime, timedelta, timezone
 
-import requests
-
 from logger import ServiceLogger
 
+# the email library of harvester_service_monitoring, so this runs from the repository checkout
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from harvester_service_monitoring.libs.notifications import Notifications  # noqa: E402
+
 _logger = ServiceLogger("panda_server_logs", __file__).logger
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 
 # "2026-10-23 08:04:58,182 panda.log.DBProxy: ERROR    " -- the Python logging prefix
 HEADER_RE = re.compile(r"^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2},\d+ \S+: [A-Z]+\s+")
@@ -57,13 +60,12 @@ MASK_RE = re.compile(r"'\*'|0xN|(?<![A-Za-z0-9_])N(?![A-Za-z0-9_])")
 
 SOURCE_FIELDS = ["@timestamp", "host.name", "event.original"]
 PAGE_SIZE = 1000
-# Mattermost cuts posts at 16383 characters
-MAX_POST_CHARS = 15000
-MAX_SAMPLE_CHARS = 300
+# SMTP allows 998 characters per line; executemany errors dump whole bind arrays on one line
+MAX_LINE_CHARS = 990
 
 
 def signature_of(doc, code_field):
-    """Return (signature_id, method, error, first_line) for one document"""
+    """Return (signature_id, method, error) for one document"""
     first_line = HEADER_RE.sub("", doc.get("event", {}).get("original", "").split("\n", 1)[0], count=1)
     match = METHOD_RE.match(first_line)
     method = match.group(1) if match else "?"
@@ -77,7 +79,7 @@ def signature_of(doc, code_field):
         text = BIND_DUMP_RE.sub("", text).rstrip(": ")
         text = NUMBER_RE.sub("N", HEX_RE.sub("0xN", QUOTED_RE.sub("'*'", text)))
         error = text[:MAX_ERROR_TEXT] or "?"
-    return signature_id(method, error), method, error, first_line
+    return signature_id(method, error), method, error
 
 
 def signature_id(method, error):
@@ -241,7 +243,7 @@ def collect(pages, cfg, ranges, rules):
             index = int((end - parse_timestamp(doc["@timestamp"])) / period)
             if not 0 <= index < n_periods:
                 continue
-            sig_id, method, error, first_line = signature_of(doc, cfg["code_field"])
+            sig_id, method, error = signature_of(doc, cfg["code_field"])
             group = groups.get(sig_id)
             if group is None:
                 group = groups[sig_id] = {
@@ -256,10 +258,11 @@ def collect(pages, cfg, ranges, rules):
             group["counts"][index] += 1
             if index == 0:
                 group["hosts"].add(doc.get("host", {}).get("name", "?"))
-                # documents come newest first, so the first one is the latest occurrence
+                # documents come newest first: the first one is the latest occurrence, the last one the first
                 if group["sample"] is None:
-                    group["sample"] = first_line[:MAX_SAMPLE_CHARS]
+                    group["sample"] = doc.get("event", {}).get("original", "")
                     group["last"] = doc["@timestamp"]
+                group["first"] = doc["@timestamp"]
     return groups, n_docs
 
 
@@ -298,90 +301,110 @@ def flag(groups, cfg):
             group["flags"].append("always")
 
 
-def cell(text):
-    return str(text).replace("|", "\\|").replace("\n", " ")
+def text_table(header, rows):
+    """Plain-text table with aligned columns; the last column (the longest) isn't padded"""
+    rows = [[str(value) for value in row] for row in [header] + rows]
+    widths = [max(len(row[i]) for row in rows) for i in range(len(header) - 1)]
+    return "\n".join("  ".join([value.ljust(width) for value, width in zip(row, widths)] + [row[-1]]) for row in rows)
 
 
-def table(rows, header):
-    lines = ["| " + " | ".join(header) + " |", "|" + "---|" * len(header)]
-    lines += ["| " + " | ".join(cell(value) for value in row) + " |" for row in rows]
-    return "\n".join(lines)
+def signature_table(groups, reasons=None):
+    rows = []
+    for g in groups:
+        description = f"{g['method']} | {g['error']}"
+        if reasons:
+            description += f"  ({reasons[g['id']]['reason']})"
+        previous = " / ".join(str(count) for count in g["counts"][1:])
+        rows.append([g["id"], ", ".join(g["flags"]) or "-", g["counts"][0], previous, len(g["hosts"]) or "-", description])
+    return text_table(["ID", "Flags", "This week", "Previous", "Hosts", "Method | Error"], rows)
 
 
-def previous_counts(group):
-    return " / ".join(str(count) for count in group["counts"][1:])
+def time_str(timestamp):
+    return timestamp[:19].replace("T", " ")
 
 
-def hosts(group):
-    names = sorted(name.split(".")[0] for name in group["hosts"])
-    return ", ".join(names[:3]) + (f" +{len(names) - 3}" if len(names) > 3 else "")
+def sample_text(sample, max_chars):
+    lines = [line if len(line) <= MAX_LINE_CHARS else line[:MAX_LINE_CHARS] + " [...]" for line in sample.rstrip("\n").split("\n")]
+    text = "\n".join(lines)
+    if len(text) > max_chars:
+        text = text[:max_chars] + "\n[... cut]"
+    return text
 
 
-def truncate(text, limit, what):
-    if len(text) <= limit:
-        return text
-    cut = text.rfind("\n", 0, limit)
-    return text[: cut if cut > 0 else limit] + f"\n\n_... cut, too many {what} for one post_"
+def heading(title):
+    return ["", title, "=" * len(title), ""]
 
 
-def build_message(cfg, groups, ranges, n_docs, aggregations, rules, truncated):
+def build_report(cfg, groups, ranges, aggregations, truncated, n_docs, rules):
+    """Return the subject and the plain-text body of the report"""
     period_totals = {int(b["key"]): b["doc_count"] for b in aggregations.get("periods", {}).get("buckets", [])}
     total = period_totals.get(0, sum(g["counts"][0] for g in groups.values()))
-    ignored_total = sum(g["counts"][0] for g in groups.values() if g["ignored"])
-    active = [g for g in groups.values() if g["counts"][0] > 0]
-    flagged = sorted((g for g in active if g["flags"]), key=lambda g: (-len(g["flags"]), -g["counts"][0]))
+    by_count = sorted(groups.values(), key=lambda g: -g["counts"][0])
+    active = [g for g in by_count if g["counts"][0] > 0 and not g["ignored"]]
+    ignored = [g for g in by_count if g["ignored"]]
+    flagged = sorted((g for g in by_count if g["flags"]), key=lambda g: (-len(g["flags"]), -g["counts"][0]))
     start, end = ranges[0]
-    n_previous = len(ranges) - 1
+    level = cfg["log_level"]
 
+    subject = f"[PanDA logs] {cfg['title']} {start:%Y-%m-%d} to {end:%Y-%m-%d}: " + (f"{len(flagged)} flagged" if flagged else "nothing new")
     lines = [
-        f"#### {cfg['title']}: {start:%Y-%m-%d} to {end:%Y-%m-%d}",
-        f"**{total}** {cfg['log_level']}s this week ({ignored_total} in ignored signatures), "
-        f"{len(active)} signatures, **{len(flagged)} flagged**. "
-        f"Compared with the previous {n_previous} weeks.",
+        f"{cfg['title']}: {start:%Y-%m-%d %H:%M} to {end:%Y-%m-%d %H:%M} UTC",
+        "",
+        f"- Source: {cfg['index']} fields.type={cfg['log_type']} logLevel={level}",
+        f"- This week: {total} {level}s, {len(active)} signatures, {len(ignored)} ignored signatures with {sum(g['counts'][0] for g in ignored)} {level}s",
+        f"- Documents downloaded: {n_docs}",
+        f"- Compared with the previous {len(ranges) - 1} weeks: 'Previous' lists their counts, newest first",
     ]
-    warnings = []
     if truncated:
-        warnings.append(f"stopped at max_documents={cfg['max_documents']}: the oldest weeks are incomplete, so 'new' may be wrong")
+        lines.append(f"- WARNING: stopped at max_documents={cfg['max_documents']}, the oldest weeks are incomplete, so 'new' may be wrong")
     oldest = aggregations.get("oldest", {}).get("value_as_string")
     if oldest and parse_timestamp(oldest) > ranges[-1][0] + timedelta(days=1):
-        warnings.append(f"OpenSearch only has data since {oldest[:10]}, so 'new' is compared with less history")
-    lines += [f":warning: {warning}" for warning in warnings]
-    if flagged:
-        lines.append("")
-        lines.append(
-            table(
-                [(", ".join(g["flags"]), g["method"], g["error"], g["counts"][0], previous_counts(g), hosts(g), f"`{g['id']}`") for g in flagged],
-                ["Flags", "Method", "Error", "This week", "Previous weeks", "Hosts", "ID"],
-            )
-        )
-        samples = [f"`{g['id']}` {g['last'][:19].replace('T', ' ')}\n```\n{g['sample']}\n```" for g in flagged if g["sample"]]
-        if samples:
-            lines += ["", "Latest occurrence:", ""] + samples
-    else:
-        lines.append("Nothing new or spiking.")
-    text = truncate("\n".join(lines), MAX_POST_CHARS, "signatures")
+        lines.append(f"- WARNING: OpenSearch only has data since {oldest[:10]}, so 'new' is compared with less history")
 
-    # the card, shown with the message details: every signature of the week
-    rows = []
-    for g in sorted(active, key=lambda g: -g["counts"][0]):
-        note = f"ignored: {rules[g['id']]['reason']}" if g["ignored"] else ""
-        rows.append((", ".join(g["flags"]), g["method"], g["error"], g["counts"][0], previous_counts(g), len(g["hosts"]) or "", f"`{g['id']}`", note))
-    card = f"{n_docs} documents downloaded, previous weeks most recent first\n\n" + table(
-        rows, ["Flags", "Method", "Error", "This week", "Previous weeks", "Hosts", "ID", "Note"]
-    )
-    message = {"text": text, "props": {"card": truncate(card, MAX_POST_CHARS, "signatures")}}
-    if cfg.get("channel"):
-        message["channel"] = cfg["channel"]
-    return message
+    lines += heading(f"Flagged ({len(flagged)})")
+    lines.append(signature_table(flagged) if flagged else "Nothing new, spiking, or on the always-flag list.")
+    lines += heading(f"Active signatures ({len(active)})")
+    lines.append(signature_table(active) if active else "None.")
+    if ignored:
+        lines += heading(f"Ignored signatures ({len(ignored)})")
+        lines += ["Excluded from the download and only counted, so a spike still shows.", ""]
+        lines.append(signature_table(ignored, rules))
+
+    # the latest occurrence of each signature, flagged ones first
+    lines += heading("Samples")
+    for g in flagged + [g for g in active if not g["flags"]]:
+        if not g["sample"]:
+            continue
+        title = f"{g['id']} {g['method']} -- {g['error']}" + (f" ({', '.join(g['flags'])})" if g["flags"] else "")
+        lines += [
+            title,
+            "-" * min(len(title), 78),
+            f"{g['counts'][0]} this week, {time_str(g['first'])} .. {time_str(g['last'])} UTC",
+            f"Hosts: {', '.join(sorted(name.split('.')[0] for name in g['hosts']))}",
+            "",
+            sample_text(g["sample"], cfg["max_sample_chars"]),
+            "",
+        ]
+    return subject, "\n".join(lines)
+
+
+def send_email(cfg, subject, body):
+    to = [address.strip() for address in cfg["to"].split(",") if address.strip()]
+    if not to:
+        raise RuntimeError("no email address in [email] to")
+    # Notifications doesn't separate the headers from the text, and smtplib only takes ASCII text
+    text = "\n" + body.encode("ascii", "replace").decode("ascii")
+    Notifications(to=to, mailserver=cfg["mailserver"], fromemail=cfg["from"], text=text, subject=subject).send_notification_email()
 
 
 def read_config(settings, section, settings_path):
     if not settings.has_section(section):
         raise RuntimeError(f"no section [{section}] in {settings_path}")
     get = settings[section]
+    # the ignore files are in git next to this script, so a git pull updates them
     ignore_file = get.get("ignore_file", "")
     if ignore_file and not os.path.isabs(ignore_file):
-        ignore_file = os.path.join(os.path.dirname(os.path.abspath(settings_path)), ignore_file)
+        ignore_file = os.path.join(SCRIPT_DIR, ignore_file)
     return {
         "title": get.get("title", section),
         "index": get.get("index", "atlas_pandalogs-*"),
@@ -395,15 +418,19 @@ def read_config(settings, section, settings_path):
         "spike_factor": get.getfloat("spike_factor", 5.0),
         "spike_min_count": get.getint("spike_min_count", 50),
         "max_documents": get.getint("max_documents", 200000),
-        "channel": get.get("channel", ""),
+        "max_sample_chars": get.getint("max_sample_chars", 10000),
+        # email: [email] defaults, "to" can be set per log
+        "to": get.get("to", settings.get("email", "to", fallback="")),
+        "mailserver": settings.get("email", "mailserver", fallback="localhost"),
+        "from": settings.get("email", "from", fallback="atlpan@mail.cern.ch"),
     }
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Weekly report of PanDA server log error signatures to Mattermost")
+    parser = argparse.ArgumentParser(description="Weekly email report of PanDA server log error signatures")
     parser.add_argument("-s", "--settings", required=True, help="settings file")
     parser.add_argument("-l", "--log", required=True, help="section of the settings file with the log to report")
-    parser.add_argument("--dry-run", action="store_true", help="print the message instead of posting it")
+    parser.add_argument("--dry-run", action="store_true", help="print the email instead of sending it")
     parser.add_argument("--replay", help="read a saved _search response instead of querying OpenSearch")
     args = parser.parse_args()
 
@@ -433,18 +460,15 @@ def main():
         groups, n_docs = collect(results.pages(), cfg, ranges, rules)
         add_ignored_counts(groups, results.aggregations, rules, n_periods)
         flag(groups, cfg)
-        message = build_message(cfg, groups, ranges, n_docs, results.aggregations, rules, results.truncated)
+        subject, body = build_report(cfg, groups, ranges, results.aggregations, results.truncated, n_docs, rules)
         n_flagged = sum(1 for g in groups.values() if g["flags"])
         _logger.info(f"{args.log}: {n_docs} documents, {len(groups)} signatures, {n_flagged} flagged, truncated={results.truncated}")
 
         if args.dry_run:
-            print(message["text"])
-            print("\n---- card ----\n")
-            print(message["props"]["card"])
+            print(f"Subject: {subject}\n\n{body}")
             return 0
-        response = requests.post(settings.get("mattermost", "webhook_url"), json=message, timeout=60)
-        response.raise_for_status()
-        _logger.info(f"{args.log}: posted to Mattermost")
+        send_email(cfg, subject, body)
+        _logger.info(f"{args.log}: sent to {cfg['to']}")
         return 0
     except Exception as ex:
         _logger.exception(f"{args.log}: failed: {ex}")

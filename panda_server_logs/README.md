@@ -2,7 +2,7 @@
 
 ## What is it
 A weekly cron job that reads the errors of one PanDA server log from OpenSearch
-(`atlas_pandalogs-*`), groups them into signatures and posts a summary to Mattermost.
+(`atlas_pandalogs-*`), groups them into signatures and emails a report.
 Each log has its own section in the settings file and its own cron job.
 
 A signature is `<method> | <error>`: the first word of the message, and the parsed error
@@ -13,8 +13,9 @@ nothing is stored between runs. A signature is flagged as:
 - **spike**: this week >= `spike_factor` x the median of the previous weeks, and at least `spike_min_count`
 - **always**: its error code is in `always_flag`
 
-The message lists the flagged signatures with their latest occurrence, or says that
-nothing is new. The full table of the week's signatures is in the message details (card).
+The email is sent every week, also when nothing is flagged. It contains the flagged,
+active and ignored signatures with their weekly counts, and the latest occurrence of each
+active signature with its full traceback, flagged ones first.
 
 ## Ignored signatures
 Expected errors go into the ignore file of the log (e.g. `ignore_dbproxy.ini`), with a
@@ -26,20 +27,23 @@ of the 4 weeks (stopped at `max_documents`).
 ## Configuration
 `settings.ini.template`, with the secrets filled in by teigi:
 - `[esserver]`: OpenSearch account, the same as the other monitoring scripts
-- `[mattermost]`: incoming webhook URL
+- `[email]`: recipients, mail server and sender
 - one section per log, e.g. `[dbproxy]`
 
 ## Running
+The email is sent with `harvester_service_monitoring/libs/notifications.py`, so the script
+runs from the repository checkout. The ignore files are read from the script directory,
+the settings file can be anywhere.
 ```
 python3 panda_server_logs.py -s settings.ini -l dbproxy
 ```
-- `--dry-run`: print the message instead of posting it
+- `--dry-run`: print the email instead of sending it
 - `--replay <file>`: use a saved `_search` response instead of querying OpenSearch
 
-Logs go to `logs/panda_server_logs.log`. The exit code is 1 when the query or the post fails.
+Logs go to `logs/panda_server_logs.log`. The exit code is 1 when the query or the email fails.
 
 ### Cronjob
 Monday 08:00, one line per log:
 ```
-0 8 * * 1 atlpan /opt/venv/bin/python3 /data/atlpan/panda_server_logs/panda_server_logs.py -s /data/atlpan/panda_server_logs/settings.ini -l dbproxy > /dev/null 2>&1
+0 8 * * 1 atlpan /opt/venv/bin/python3 /data/atlpan/harvester_monitoring/panda_server_logs/panda_server_logs.py -s /data/atlpan/panda_server_logs/settings.ini -l dbproxy > /dev/null 2>&1
 ```

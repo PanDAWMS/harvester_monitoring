@@ -1,12 +1,22 @@
 import os
 import logging
 
+from pathlib import Path
+
 
 class ServiceLogger:
     def __init__(self, name, file, loglevel='INFO'):
-        dir_logs = os.path.dirname(os.path.realpath(file)) + '/logs/'
-        os.makedirs(dir_logs, exist_ok=True)
-        self.dirpath = dir_logs
+        # the nearest logs/ directory above the file, as in the repository's logger.py
+        # (this one is also used by harvester_service_monitoring/libs/notifications.py)
+        p = str(Path(file).parent) + '/logs/'
+        i = 0
+        while True:
+            if not os.path.exists(p):
+                i = i + 1
+                p = str(Path(file).parents[i]) + '/logs/'
+            else:
+                self.dirpath = p
+                break
         self.logger = self.__get_logger(loglevel, name)
 
     # private method
