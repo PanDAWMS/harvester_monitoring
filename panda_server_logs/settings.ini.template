@@ -1,0 +1,31 @@
+[esserver]
+login: %TEIGI__esserver_login__%
+password: %TEIGI__esserver_password__%
+host: os-atlas.cern.ch:443
+capath: /etc/pki/tls/certs/ca-bundle.crt
+[mattermost]
+webhook_url: %TEIGI__panda_logs_mattermost_webhook__%
+
+# One section per log; each cron job runs one of them with -l <section>.
+[dbproxy]
+title: DBProxy errors
+index: atlas_pandalogs-*
+# fields.type of the log in OpenSearch, and the log level to report
+log_type: dbproxyfiltered
+log_level: ERROR
+# Field with a parsed error code; when present it is the error part of the signature
+code_field: dbErrorCode
+# Signatures that are expected, relative to this file
+ignore_file: ignore_dbproxy.ini
+# Flagged whenever they occur (deadlocks, value too large)
+always_flag: ORA-00060,ORA-01438
+# This week is compared with the history_periods weeks before it. OpenSearch keeps ~30 days
+period_days: 7
+history_periods: 3
+# spike: this week >= spike_factor x the median of the previous weeks, and at least spike_min_count
+spike_factor: 5
+spike_min_count: 50
+# Stop downloading after this many documents; the report says so
+max_documents: 200000
+# Optional, if the webhook may post to other channels
+# channel: panda-logs
