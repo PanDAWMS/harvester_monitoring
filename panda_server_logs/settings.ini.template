@@ -1,0 +1,31 @@
+# The OpenSearch account ([esserver]) is read from the settings.ini of the repository,
+# like the other monitoring scripts; an [esserver] section here overrides it.
+[email]
+# comma-separated; a log section can set its own "to"
+to: fernando.harald.barreiro.megino@cern.ch
+mailserver: localhost
+from: atlpan@mail.cern.ch
+
+# One section per log; each cron job runs one of them with -l <section>.
+[dbproxy]
+title: DBProxy errors
+index: atlas_pandalogs-*
+# fields.type of the log in OpenSearch, and the log level to report
+log_type: dbproxyfiltered
+log_level: ERROR
+# Field with a parsed error code; when present it is the error part of the signature
+code_field: dbErrorCode
+# Signatures that are expected, relative to the script directory (in git)
+ignore_file: ignore_dbproxy.ini
+# Flagged whenever they occur (deadlocks, value too large)
+always_flag: ORA-00060,ORA-01438
+# This week is compared with the history_periods weeks before it. OpenSearch keeps ~30 days
+period_days: 7
+history_periods: 3
+# spike: this week >= spike_factor x the median of the previous weeks, and at least spike_min_count
+spike_factor: 5
+spike_min_count: 50
+# Stop downloading after this many documents; the report says so
+max_documents: 200000
+# Each sample (full event with traceback) is cut to this many characters
+max_sample_chars: 10000
