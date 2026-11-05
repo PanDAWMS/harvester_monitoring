@@ -2,7 +2,7 @@
 # like the other monitoring scripts; an [esserver] section here overrides it.
 [email]
 # comma-separated; a log section can set its own "to"
-to: fernando.harald.barreiro.megino@cern.ch
+to: atlas-adc-panda-service@cern.ch
 mailserver: localhost
 from: atlpan@mail.cern.ch
 
